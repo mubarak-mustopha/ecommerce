@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>
+        {% if detail == "request" %}
+            Account Not Verified!
+        {% else %}
+            Activation Email Sent
+        {% endif %}
+        
+    </h1>
+
+    <p>
+        Check your inbox for an activation email.
+    </p>
+{% endblock %}

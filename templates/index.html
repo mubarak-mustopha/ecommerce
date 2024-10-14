@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1>Welcome To Our Home Page
+
+    {% if request.user.is_authenticated %}
+        , {{request.user.email}}
+    {% endif %}
+    </h1>
+
+{% endblock %}    

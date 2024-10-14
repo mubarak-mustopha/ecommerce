@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1>Email Verification Failed</h1>
+
+    <p>
+        Sorry! You entered an invalid or expired link.
+    </p>
+
+    <button onclick="window.location=`{% url 'resend-activation-email' %}`">
+        RESEND ACTIVATION EMAIL
+    </button>
+    
+    <script>
+        window.onload = function () {
+            document.cookie = "activation-email=" + "{{user.email}}" + ";domain=;path=/";
+        }
+    </script>
+
+{% endblock %}
+
+{% comment %}
+<!-- onclick="window.location='{% url `resend-activation-email` %}'" -->
+
+{% endcomment %}
