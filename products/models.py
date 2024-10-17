@@ -1,4 +1,5 @@
 import uuid
+from autoslug import AutoSlugField
 
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -9,14 +10,14 @@ from django.db import models
 class BaseContentModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True)
-    slug = models.SlugField()
+    slug = AutoSlugField(populate_from="name", unique=True)
     image = models.ImageField()
 
     class Meta:
         abstract = True
 
     def __str__(self):
-        return self.title
+        return self.name
 
 
 class Category(BaseContentModel):
@@ -25,6 +26,14 @@ class Category(BaseContentModel):
 
 class Brand(BaseContentModel):
     image = models.ImageField(upload_to="brands", blank=True)
+
+
+class Color(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
 
 
 class Product(BaseContentModel):
@@ -37,6 +46,7 @@ class Product(BaseContentModel):
     image = models.ImageField(upload_to="products", verbose_name="Main Image")
     gender = models.CharField(max_length=1, choices=GENDERS)
     description = models.TextField(blank=True)
+    colors = models.ManyToManyField(to=Color, related_name="products")
 
     category = models.ForeignKey(
         to=Category, on_delete=models.CASCADE, related_name="products"
@@ -44,6 +54,14 @@ class Product(BaseContentModel):
     brand = models.ForeignKey(
         to=Brand, on_delete=models.CASCADE, related_name="products"
     )
+
+    @property
+    def available_colors(self):
+        return " / ".join(self._get_colors.split)
+
+    @property
+    def _get_colors(self):
+        return self.colors.values_list("name", flat=True)
 
 
 class ProductImage(models.Model):
@@ -75,7 +93,7 @@ class ProductSize(models.Model):
     )
 
     def __str__(self):
-        return f"{self.quantity} {self.get_product_size_display()}"
+        return f"{self.quantity} {self.get_size_display()}"
 
 
 class Review(models.Model):
@@ -98,3 +116,4 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.rating} stars"
+
