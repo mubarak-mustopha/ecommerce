@@ -2,11 +2,10 @@
 
 {% block content %}
 
-    <h1>Welcome To Our Home Page
+        {% include 'home-carousel.html' %}
+        
+        {% include 'cats_of_month.html' %}
 
-    {% if request.user.is_authenticated %}
-        , {{request.user.email}}
-    {% endif %}
-    </h1>
+        {% include 'featured_products.html' %}
 
 {% endblock %}    

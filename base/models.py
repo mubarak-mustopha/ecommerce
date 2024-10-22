@@ -35,16 +35,16 @@ class SiteDetail(models.Model):
         to=Product, related_name="featured_products"
     )
 
-    carousel_products = models.ManyToManyField(
-        to=Product,
-        related_name="carousel_products",
-    )
-
     cats_of_month = models.ManyToManyField(
         to=Category,
         related_name="cats_of_month",
         verbose_name="Categories of The Month",
     )
+
+    # carousel images
+    banner_img1 = models.ImageField(upload_to="assets/", default="")
+    banner_img2 = models.ImageField(upload_to="assets/", default="")
+    banner_img3 = models.ImageField(upload_to="assets/", default="")
 
     def __str__(self):
         return self.name
