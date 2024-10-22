@@ -1,0 +1,22 @@
+ {% extends 'base.html' %}
+
+ {% block content %}
+
+<div class="container p-3">
+    {% if not request.user.is_authenticated %}
+        <p>You are currently not logged in. Go to <a href="{% url 'login' %}">login page</a></p>
+    {% else %}
+        <p>
+            Hi, {{request.user.email}}.
+        </p>
+        <p>
+            Want to <a href="{% url 'logout' %}">log out?</a>
+        </p>
+    {% endif %}
+</div>    
+
+ {% endblock content %}
+
+ {% block footer %}
+
+{% endblock footer %}

@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.views import (
     PasswordResetView,
     PasswordResetDoneView,
@@ -106,7 +106,7 @@ def update_user(request):
     return render(request, "accounts/user_update.html", {"form": form})
 
 
-def login(request):
+def login_user(request):
     form = LoginForm()
     if request.method == "POST":
         email = request.POST["email"]
@@ -124,9 +124,19 @@ def login(request):
         else:
             login(request, user)
             next = request.GET.get("next", "home")
-            redirect(next)
+            return redirect(next)
 
     return render(request, "accounts/login.html", {"form": form})
+
+
+def logout_user(request):
+    logout(request)
+    return redirect("home")
+
+
+def userpage(request):
+    context = {}
+    return render(request, "accounts/userpage.html", context)
 
 
 class CustomPasswordResetView(PasswordResetView):
