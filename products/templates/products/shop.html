@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <div class="container py-5">
+        <div class="row">
+
+            <div class="col-lg-3">
+                <h1 class="h2 pb-4">Categories</h1>
+                <ul class="list-unstyled templatemo-accordion">
+                    <li class="pb-3">
+                        <a class="collapsed d-flex justify-content-between h3 text-decoration-none" href="#">
+                            Gender
+                            <i class="fa fa-fw fa-chevron-circle-down mt-1"></i>
+                        </a>
+                        <ul class="collapse show list-unstyled pl-3">
+                            <li><a class="text-decoration-none" href="{% url 'shop' %}?gender=male">Men</a></li>
+                            <li><a class="text-decoration-none" href="{% url 'shop' %}?gender=female">Women</a></li>
+                        </ul>
+                    </li>
+                    <li class="pb-3">
+                        <a class="collapsed d-flex justify-content-between h3 text-decoration-none" href="#">
+                            Sale
+                            <i class="pull-right fa fa-fw fa-chevron-circle-down mt-1"></i>
+                        </a>
+                        <ul id="collapseTwo" class="collapse list-unstyled pl-3">
+                            <li><a class="text-decoration-none" href="{% url 'shop' %}?category=sport">Sport</a></li>
+                            <li><a class="text-decoration-none" href="{% url 'shop' %}?category=luxury">Luxury</a></li>
+                        </ul>
+                    </li>
+                    <li class="pb-3">
+                        <a class="collapsed d-flex justify-content-between h3 text-decoration-none" href="#">
+                            Product
+                            <i class="pull-right fa fa-fw fa-chevron-circle-down mt-1"></i>
+                        </a>
+                        <ul id="collapseThree" class="collapse list-unstyled pl-3">
+                            {% for category in categories %}
+                            <li><a class="text-decoration-none" href="{% url 'shop' %}?category={{category}}">{{category}}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="col-lg-9">
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-inline shop-top-menu pb-3 pt-1">
+                            <li class="list-inline-item">
+                                <a class="h3 text-dark text-decoration-none mr-3" href="{% url 'shop' %}">All</a>
+                            </li>
+                            <li class="list-inline-item">
+                                <a class="h3 text-dark text-decoration-none mr-3" href="{% url 'shop' %}?gender=male">Men's</a>
+                            </li>
+                            <li class="list-inline-item">
+                                <a class="h3 text-dark text-decoration-none" href="{% url 'shop' %}?gender=female">Women's</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6 pb-4">
+                        <div class="d-flex">
+                            <select class="form-control">
+                                <option>Featured</option>
+                                <option>A to Z</option>
+                                <option>Item</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    {% for product in page_obj %}
+                    <div class="col-md-4">
+                        <div class="card mb-4 product-wap rounded-0">
+                            <div class="card rounded-0">
+                                <img class="card-img rounded-0 img-fluid" src="{{product.imageUrl}}">
+                                <div class="card-img-overlay rounded-0 product-overlay d-flex align-items-center justify-content-center">
+                                    <ul class="list-unstyled actions">
+                                        <li><a class="btn btn-success text-white" href=""><i class="far fa-heart add"></i></a></li>
+                                        <li><a class="btn btn-success text-white mt-2" href=""><i class="far fa-eye"></i></a></li>
+                                        <li><a class="btn btn-success text-white mt-2" href=""><i class="fas fa-cart-plus add"></i></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <a href="shop-single.html" class="h3 text-decoration-none">Oupidatat non</a>
+                                <ul class="w-100 list-unstyled d-flex justify-content-between mb-0">
+                                    {% if product.productsizes.exists %}
+                                    <li>M/L/X/XL</li>
+                                    {% endif %}
+                                    <li class="pt-2">
+                                        <span class="product-color-dot color-dot-red float-left rounded-circle ml-1"></span>
+                                        <span class="product-color-dot color-dot-blue float-left rounded-circle ml-1"></span>
+                                        <span class="product-color-dot color-dot-black float-left rounded-circle ml-1"></span>
+                                        <span class="product-color-dot color-dot-light float-left rounded-circle ml-1"></span>
+                                        <span class="product-color-dot color-dot-green float-left rounded-circle ml-1"></span>
+                                    </li>
+                                </ul>
+                                <ul class="list-unstyled d-flex justify-content-center mb-1">
+                                    <li>
+                                        <i class="text-warning fa fa-star"></i>
+                                        <i class="text-warning fa fa-star"></i>
+                                        <i class="text-warning fa fa-star"></i>
+                                        <i class="text-muted fa fa-star"></i>
+                                        <i class="text-muted fa fa-star"></i>
+                                    </li>
+                                </ul>
+                                <p class="text-center mb-0">${{product.price}}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="row">
+                    <ul class="pagination pagination-lg justify-content-end">
+                        {% for page in page_range  %}
+                            <li class="page-item">
+                                <a class="page-link {% if page == current_page %}active{% endif %} rounded-0 mr-3 shadow-sm border-top-0 border-left-0" 
+                                href="{% url 'shop' %}?page={{page}}" tabindex="-1">
+                                {{page}}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function toggleWishList(e){
+            let classList = e.target.classList;
+            if (classList.contains("add")){
+                classList.value = "fas fa-heart";
+            }else {
+                classList.value = "far fa-heart add";
+            }
+            
+        }
+
+        function toggleCart(e){
+            let classList = e.target.classList;
+            if (classList.contains("add")){
+                classList.value = "fas fa-shopping-cart";
+            }else {
+                classList.value = "fas fa-cart-plus add";
+            }
+            
+        }
+
+        function singleShop(e){
+            console.log(e.target.classList.value);
+            console.log(e.target.className);
+            
+        }
+
+        $(".list-unstyled.actions").click(function(e){
+            e.preventDefault();
+            //Do something if only <i></i>
+            if (e.target.nodeName == "I"){             
+                        let classList = e.target.classList
+                        if (classList.contains("fa-heart")) toggleWishList(e);
+                        else if (classList.contains("fa-eye")) singleShop(e);
+                        else toggleCart(e);
+                    }
+            
+        })
+    </script>
+
+{% endblock content %}
