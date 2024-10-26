@@ -1,4 +1,4 @@
-from django.db.models import Count
+from django.db.models import Count, Case, Value, When
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -13,12 +13,25 @@ def shop(request):
 
     paginator = Paginator(products, 2)
     page_num = request.GET.get("page", 1)
-    page_obj = paginator.get_page(page_num)
+    products = paginator.get_page(page_num).object_list
     page_range = paginator.page_range
+
+    if request.user.is_authenticated:
+        products = products.annotate(
+            in_wishlist=Case(
+                When(
+                    id__in=request.user.wishlist_set.values_list(
+                        "product_id", flat=True
+                    ),
+                    then=Value(True),
+                ),
+                default=Value(False),
+            )
+        )
 
     context = {
         "categories": Category.objects.values_list("name", flat=True),
-        "page_obj": page_obj,
+        "products": products,
         "page_range": page_range,
         "current_page": int(page_num),
     }
