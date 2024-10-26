@@ -1,8 +1,9 @@
 from django.db.models import Count
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.shortcuts import render
 
-from .models import Product, Category
+from .models import Product, Category, WishList
 
 
 # Create your views here.
@@ -22,8 +23,33 @@ def shop(request):
         "current_page": int(page_num),
     }
 
-    from pprint import pprint
-
-    pprint(context)
     return render(request, "products/shop.html", context)
 
+
+def toggle_wishlist(request, pk):
+    data = {}
+    product = Product.objects.filter(id=pk)
+
+    if not product.exists():
+        return JsonResponse(data={"error": "Invalid id for product"}, status=400)
+
+    if request.user.is_authenticated:
+        wishlist, created = WishList.objects.get_or_create(
+            product=product.first(),
+            user=request.user,
+        )
+        if not created:
+            wishlist.delete()
+        data = {"success": True}
+    else:
+        wishlist = request.session.get("wishlist")
+        if not wishlist:
+            wishlist = request.session["wishlist"] = [str(pk)]
+        else:
+            if str(pk) in wishlist:
+                wishlist.remove(str(pk))
+            else:
+                wishlist.append(str(pk))
+        request.session.modified = True
+        data = {"success": True}
+    return JsonResponse(data)

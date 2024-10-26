@@ -76,9 +76,9 @@
                                 <img class="card-img rounded-0 img-fluid" src="{{product.imageUrl}}">
                                 <div class="card-img-overlay rounded-0 product-overlay d-flex align-items-center justify-content-center">
                                     <ul class="list-unstyled actions">
-                                        <li><a class="btn btn-success text-white" href=""><i class="far fa-heart add"></i></a></li>
+                                        <li><a class="btn btn-success text-white" href=""><i class="far fa-heart" data-action="add" data-request-url="{% url 'toggle_wishlist' product.id %}"></i></a></li>
                                         <li><a class="btn btn-success text-white mt-2" href=""><i class="far fa-eye"></i></a></li>
-                                        <li><a class="btn btn-success text-white mt-2" href=""><i class="fas fa-cart-plus add"></i></a></li>
+                                        <li><a class="btn btn-success text-white mt-2" href=""><i class="fas fa-cart-plus" data-action="add" data-request-url="{% url 'toggle_wishlist' product.id %}"></i></a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -130,22 +130,55 @@
     </div>
 
     <script>
+        function sendGetRequest(url, data, success, error){
+            $.ajax({
+                type: "GET",
+                url : url,
+                data: data,
+                success: success,
+                error: error,
+            })
+        }
+
         function toggleWishList(e){
             let classList = e.target.classList;
-            if (classList.contains("add")){
+            let dataset = e.target.dataset
+
+            sendGetRequest(
+                dataset.requestUrl,
+                {action: dataset.action},
+                json => {
+                    console.log("This is the response");
+                    
+                    console.log(json);
+                },
+                (xhr, errmsg, err) => {
+                    console.log("Err",err);
+                    console.log("Err msg",errmsg);
+                    console.log("xhr",xhr.status);
+                }
+            )  
+
+            if (dataset.action == "add"){
                 classList.value = "fas fa-heart";
+                dataset.action = "remove";
             }else {
-                classList.value = "far fa-heart add";
+                classList.value = "far fa-heart";
+                dataset.action = "add";
             }
             
         }
 
         function toggleCart(e){
             let classList = e.target.classList;
-            if (classList.contains("add")){
+            let dataset = e.target.dataset;
+
+            if (dataset.action == "add"){
                 classList.value = "fas fa-shopping-cart";
+                dataset.action = "remove"
             }else {
-                classList.value = "fas fa-cart-plus add";
+                classList.value = "fas fa-cart-plus";
+                dataset.action = "add";
             }
             
         }
