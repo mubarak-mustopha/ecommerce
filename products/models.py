@@ -55,7 +55,9 @@ class Product(BaseContentModel):
     gender = models.CharField(max_length=1, choices=GENDERS)
     description = models.TextField(blank=True)
     colors = models.ManyToManyField(
-        to=Color, related_name="products", blank=True, null=True
+        to=Color,
+        related_name="products",
+        blank=True,
     )
     price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.0"))
     in_stock = models.IntegerField(default=5)
@@ -130,3 +132,18 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.rating} stars"
+
+
+class WishList(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+    )
+
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.product)

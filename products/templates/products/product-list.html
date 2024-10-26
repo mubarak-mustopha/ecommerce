@@ -1,0 +1,128 @@
+<div class="row">
+    {% for product in products %}
+    <div class="col-md-4">
+        <div class="card mb-4 product-wap rounded-0">
+            <div class="card rounded-0">
+                <img class="card-img rounded-0 img-fluid" src="{{product.imageUrl}}">
+                <div class="card-img-overlay rounded-0 product-overlay d-flex align-items-center justify-content-center">
+                    <ul class="list-unstyled actions">
+                        <li><a class="btn btn-success text-white" href="">
+                            {% if product.in_wishlist %}
+                            <i class="fas fa-heart" data-action="remove" 
+                            data-request-url="{% url 'toggle_wishlist' product.id %}"></i>
+                            {% else %}
+                            <i class="far fa-heart" data-action="add" 
+                            data-request-url="{% url 'toggle_wishlist' product.id %}"></i>
+                            {% endif %}
+                        </a></li>
+                        <li><a class="btn btn-success text-white mt-2" href=""><i class="far fa-eye"></i></a></li>
+                        <li><a class="btn btn-success text-white mt-2" href=""><i class="fas fa-cart-plus" data-action="add" data-request-url="{% url 'toggle_wishlist' product.id %}"></i></a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <a href="shop-single.html" class="h3 text-decoration-none">{{product.name}}</a>
+                <ul class="w-100 list-unstyled d-flex justify-content-between mb-0">
+                    {% if product.productsizes.exists %}
+                    <li>M/L/X/XL</li>
+                    {% endif %}
+                    <li class="pt-2">
+                        <span class="product-color-dot color-dot-red float-left rounded-circle ml-1"></span>
+                        <span class="product-color-dot color-dot-blue float-left rounded-circle ml-1"></span>
+                        <span class="product-color-dot color-dot-black float-left rounded-circle ml-1"></span>
+                        <span class="product-color-dot color-dot-light float-left rounded-circle ml-1"></span>
+                        <span class="product-color-dot color-dot-green float-left rounded-circle ml-1"></span>
+                    </li>
+                </ul>
+                <ul class="list-unstyled d-flex justify-content-center mb-1">
+                    <li>
+                        <i class="text-warning fa fa-star"></i>
+                        <i class="text-warning fa fa-star"></i>
+                        <i class="text-warning fa fa-star"></i>
+                        <i class="text-muted fa fa-star"></i>
+                        <i class="text-muted fa fa-star"></i>
+                    </li>
+                </ul>
+                <p class="text-center mb-0">${{product.price}}</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% block script %}
+
+<script>
+    function sendGetRequest(url, data, success, error){
+        $.ajax({
+            type: "GET",
+            url : url,
+            data: data,
+            success: success,
+            error: error,
+        })
+    }
+
+    function toggleWishList(e){
+        let classList = e.target.classList;
+        let dataset = e.target.dataset
+
+        sendGetRequest(
+            dataset.requestUrl,
+            {action: dataset.action},
+            json => {
+                console.log("This is the response");
+                
+                console.log(json);
+            },
+            (xhr, errmsg, err) => {
+                console.log("Err",err);
+                console.log("Err msg",errmsg);
+                console.log("xhr",xhr.status);
+            }
+        )  
+
+        if (dataset.action == "add"){
+            classList.value = "fas fa-heart";
+            dataset.action = "remove";
+        }else {
+            classList.value = "far fa-heart";
+            dataset.action = "add";
+        }
+        
+    }
+
+    function toggleCart(e){
+        let classList = e.target.classList;
+        let dataset = e.target.dataset;
+
+        if (dataset.action == "add"){
+            classList.value = "fas fa-shopping-cart";
+            dataset.action = "remove"
+        }else {
+            classList.value = "fas fa-cart-plus";
+            dataset.action = "add";
+        }
+        
+    }
+
+    function singleShop(e){
+        console.log(e.target.classList.value);
+        console.log(e.target.className);
+        
+    }
+
+    $(".list-unstyled.actions").click(function(e){
+        e.preventDefault();
+        //Do something if only <i></i>
+        if (e.target.nodeName == "I"){             
+                    let classList = e.target.classList
+                    if (classList.contains("fa-heart")) toggleWishList(e);
+                    else if (classList.contains("fa-eye")) singleShop(e);
+                    else toggleCart(e);
+                }
+        
+    })
+</script>
+
+{% endblock script %}

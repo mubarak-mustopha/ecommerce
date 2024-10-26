@@ -1,8 +1,9 @@
-from django.db.models import Count
+from django.db.models import Count, Case, Value, When
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.shortcuts import render
 
-from .models import Product, Category
+from .models import Product, Category, WishList
 
 
 # Create your views here.
@@ -12,18 +13,60 @@ def shop(request):
 
     paginator = Paginator(products, 2)
     page_num = request.GET.get("page", 1)
-    page_obj = paginator.get_page(page_num)
+    products = paginator.get_page(page_num).object_list
     page_range = paginator.page_range
+
+    if request.user.is_authenticated:
+        wishlist = request.user.wishlist_set.values_list("product_id", flat=True)
+
+    else:
+        wishlist = request.session.get("wishlist", [])
+
+    when_clause = When(
+        id__in=wishlist,
+        then=Value(True),
+    )
+    products = products.annotate(
+        in_wishlist=Case(
+            when_clause,
+            default=Value(False),
+        )
+    )
 
     context = {
         "categories": Category.objects.values_list("name", flat=True),
-        "page_obj": page_obj,
+        "products": products,
         "page_range": page_range,
         "current_page": int(page_num),
     }
 
-    from pprint import pprint
-
-    pprint(context)
     return render(request, "products/shop.html", context)
 
+
+def toggle_wishlist(request, pk):
+    data = {}
+    product = Product.objects.filter(id=pk)
+
+    if not product.exists():
+        return JsonResponse(data={"error": "Invalid id for product"}, status=400)
+
+    if request.user.is_authenticated:
+        wishlist, created = WishList.objects.get_or_create(
+            product=product.first(),
+            user=request.user,
+        )
+        if not created:
+            wishlist.delete()
+        data = {"success": True}
+    else:
+        wishlist = request.session.get("wishlist")
+        if not wishlist:
+            wishlist = request.session["wishlist"] = [str(pk)]
+        else:
+            if str(pk) in wishlist:
+                wishlist.remove(str(pk))
+            else:
+                wishlist.append(str(pk))
+        request.session.modified = True
+        data = {"success": True}
+    return JsonResponse(data)
