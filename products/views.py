@@ -17,17 +17,21 @@ def shop(request):
     page_range = paginator.page_range
 
     if request.user.is_authenticated:
-        products = products.annotate(
-            in_wishlist=Case(
-                When(
-                    id__in=request.user.wishlist_set.values_list(
-                        "product_id", flat=True
-                    ),
-                    then=Value(True),
-                ),
-                default=Value(False),
-            )
+        wishlist = request.user.wishlist_set.values_list("product_id", flat=True)
+
+    else:
+        wishlist = request.session.get("wishlist", [])
+
+    when_clause = When(
+        id__in=wishlist,
+        then=Value(True),
+    )
+    products = products.annotate(
+        in_wishlist=Case(
+            when_clause,
+            default=Value(False),
         )
+    )
 
     context = {
         "categories": Category.objects.values_list("name", flat=True),
