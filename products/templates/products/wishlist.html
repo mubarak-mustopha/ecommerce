@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <div class="container p-5">
+        
+        <h1 class="mb-5">
+            Products in your wishlist
+        </h1>
+
+        {% include 'products/product-list.html' %}
+
+    </div>
+
+{% endblock content %}

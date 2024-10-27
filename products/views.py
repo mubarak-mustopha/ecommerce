@@ -70,3 +70,14 @@ def toggle_wishlist(request, pk):
         request.session.modified = True
         data = {"success": True}
     return JsonResponse(data)
+
+
+def wishlist_page(request):
+    if request.user.is_authenticated:
+        wishlist = request.user.wishlist_set.values_list("product_id", flat=True)
+    else:
+        wishlist = request.session.get("wishlist", [])
+
+    products = Product.objects.filter(id__in=wishlist).annotate(in_wishlist=Value(True))
+
+    return render(request, "products/wishlist.html", {"products": products})
