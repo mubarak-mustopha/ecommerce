@@ -152,5 +152,15 @@ EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 
 # crispy_forms settings
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5" # new
-CRISPY_TEMPLATE_PACK = "bootstrap5" # new
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"  # new
+CRISPY_TEMPLATE_PACK = "bootstrap5"  # new
+
+
+# flash messages
+
+
+from django.contrib.messages import constants as messages
+
+MESSAGE_TAGS = {
+    messages.ERROR: "danger",
+}

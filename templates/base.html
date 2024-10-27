@@ -2,7 +2,7 @@
 
 <!DOCTYPE html>
 <html lang="en">
-
+ 
 <head>
     <title>Zay Shop eCommerce HTML CSS Template</title>
     <meta charset="utf-8">
@@ -38,13 +38,17 @@ https://templatemo.com/tm-559-zay-shop
         {% include 'top_nav.html' %}
         <!-- Close Top Nav -->
     
+        {% for message in messages %}
+            <div class="alert alert-{{message.tags}}" role="alert">
+                {{message}}
+            </div>
+        {% endfor %}
     
         <!-- Header -->
         {% block header %}
             {% include 'header.html' %}
         {% endblock header %}
         <!-- Close Header -->
-    
 
     
         {% block content %}
