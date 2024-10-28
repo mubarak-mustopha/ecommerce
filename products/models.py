@@ -3,6 +3,7 @@ from autoslug import AutoSlugField
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
@@ -79,6 +80,14 @@ class Product(BaseContentModel):
     def available_colors(self):
         return self.colors.values_list("name", flat=True)
 
+    @property
+    def default_color(self):
+        return self.colors.first()
+
+    @property
+    def default_size(self):
+        return self.productsizes.order_by("-quantity").first()
+
 
 class ProductImage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -147,3 +156,92 @@ class WishList(models.Model):
 
     def __str__(self):
         return str(self.product)
+
+
+class ShippingAddress(models.Model):
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    address = models.CharField(max_length=200)
+    city = models.CharField(max_length=200)
+    state = models.CharField(max_length=200)
+    zipcode = models.CharField(max_length=200)
+
+    date_added = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.address
+
+
+class Order(models.Model):
+    DELIVERY_STATUS_CHOICES = (
+        ("PENDING", "PENDING"),
+        ("SUCCESS", "SUCCESS"),
+    )
+
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders"
+    )
+    order_date = models.DateTimeField(auto_now_add=True)
+    delivery_status = models.CharField(
+        max_length=50, choices=DELIVERY_STATUS_CHOICES, default="PENDING"
+    )
+
+    def __str__(self):
+        return f"Order for {self.user}"
+
+
+class OrderItem(models.Model):
+    id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+    )
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name="order_items",
+    )
+
+    color = models.CharField(max_length=20, blank=True)
+    size = models.CharField(max_length=3, blank=True)
+    quantity = models.PositiveIntegerField(default=1)
+
+    def clean(self):
+        if self.color:
+            color_valid = self.product.colors.filter(name=self.color).exists()
+            if not color_valid:
+                raise ValidationError(
+                    {
+                        "color": f"Invalid color `{self.color}` selected\
+                                       for {self.product}"
+                    }
+                )
+
+        if self.size:
+            size_valid = self.product.productsizes.filter(size=self.size).exists()
+            if not size_valid:
+                raise ValidationError(
+                    {
+                        "color": f"Invalid size `{self.size}` selected\
+                                       for {self.product}"
+                    }
+                )
+
+    def save(self, **kwargs):
+        if not self.color:
+            self.color = self.product.default_color
+
+        if not self.size:
+            self.size = self.product.default_size
+
+        self.full_clean()
+        super.save(**kwargs)
+
+    def __str__(self):
+        return self.product
