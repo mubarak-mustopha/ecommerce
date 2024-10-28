@@ -174,20 +174,13 @@ class ShippingAddress(models.Model):
 
 
 class Order(models.Model):
-    DELIVERY_STATUS_CHOICES = (
-        ("PENDING", "PENDING"),
-        ("SUCCESS", "SUCCESS"),
-    )
-
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders"
     )
     order_date = models.DateTimeField(auto_now_add=True)
-    delivery_status = models.CharField(
-        max_length=50, choices=DELIVERY_STATUS_CHOICES, default="PENDING"
-    )
+    completed = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Order for {self.user}"
@@ -218,8 +211,7 @@ class OrderItem(models.Model):
             if not color_valid:
                 raise ValidationError(
                     {
-                        "color": f"Invalid color `{self.color}` selected\
-                                       for {self.product}"
+                        "color": f"Invalid color `{self.color}` selected for {self.product}"
                     }
                 )
 
@@ -227,10 +219,7 @@ class OrderItem(models.Model):
             size_valid = self.product.productsizes.filter(size=self.size).exists()
             if not size_valid:
                 raise ValidationError(
-                    {
-                        "color": f"Invalid size `{self.size}` selected\
-                                       for {self.product}"
-                    }
+                    {"color": f"Invalid size `{self.size}` selected for {self.product}"}
                 )
 
     def save(self, **kwargs):
