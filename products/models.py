@@ -82,11 +82,11 @@ class Product(BaseContentModel):
 
     @property
     def default_color(self):
-        return self.colors.first()
+        return self.colors.first() or ""
 
     @property
     def default_size(self):
-        return self.productsizes.order_by("-quantity").first()
+        return self.productsizes.order_by("-quantity").first().size or ""
 
 
 class ProductImage(models.Model):
@@ -198,11 +198,11 @@ class OrderItem(models.Model):
         on_delete=models.CASCADE,
         blank=True,
         null=True,
-        related_name="order_items",
+        related_name="orderitems",
     )
 
-    color = models.CharField(max_length=20, blank=True)
-    size = models.CharField(max_length=3, blank=True)
+    color = models.CharField(max_length=20, blank=True, default="")
+    size = models.CharField(max_length=3, blank=True, default="")
     quantity = models.PositiveIntegerField(default=1)
 
     def clean(self):
@@ -230,7 +230,7 @@ class OrderItem(models.Model):
             self.size = self.product.default_size
 
         self.full_clean()
-        super.save(**kwargs)
+        super().save(**kwargs)
 
     def __str__(self):
-        return self.product
+        return str(self.product)
