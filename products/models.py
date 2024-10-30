@@ -86,7 +86,15 @@ class Product(BaseContentModel):
 
     @property
     def default_size(self):
-        return self.productsizes.order_by("-quantity").first().size or ""
+        if productsizes := self.productsizes.order_by("-quantity"):
+            return productsizes.first().size
+        return ""
+
+    @staticmethod
+    def get_product_price(product, size=None):
+        if not size:
+            return product.price
+        return ProductSize.objects.get(product=product, size=size).price
 
 
 class ProductImage(models.Model):
@@ -182,8 +190,19 @@ class Order(models.Model):
     order_date = models.DateTimeField(auto_now_add=True)
     completed = models.BooleanField(default=False)
 
+    @property
+    def cart_total(self):
+        return sum([orderitem.total_price for orderitem in self.orderitems.all()])
+
     def __str__(self):
         return f"Order for {self.user}"
+
+    def __iter__(self):
+        for orderitem in self.orderitems.all():
+            yield orderitem
+
+    def __len__(self):
+        return sum([orderitem.quantity for orderitem in self.orderitems.all()])
 
 
 class OrderItem(models.Model):
@@ -231,6 +250,13 @@ class OrderItem(models.Model):
 
         self.full_clean()
         super().save(**kwargs)
+
+    @property
+    def price(self):
+        return Product.get_product_price(self.product, self.size)
+
+    def total_price(self):
+        return self.price * self.quantity
 
     def __str__(self):
         return str(self.product)
