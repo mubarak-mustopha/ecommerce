@@ -159,8 +159,21 @@ class WishList(models.Model):
         on_delete=models.CASCADE,
         null=True,
     )
+    guest_id = models.CharField(max_length=200, null=True)
 
     created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "product"],
+                name="unique_user_wishlist_item",
+            ),
+            models.UniqueConstraint(
+                fields=["guest_id", "product"],
+                name="unique_guest_wishlist_item",
+            ),
+        ]
 
     def __str__(self):
         return str(self.product)
@@ -207,6 +220,10 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
+    )
+    guest_id = models.CharField(max_length=200, null=True, blank=True)
 
     product = models.ForeignKey(
         Product,
@@ -223,6 +240,30 @@ class OrderItem(models.Model):
     color = models.CharField(max_length=20, blank=True, default="")
     size = models.CharField(max_length=3, blank=True, default="")
     quantity = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "user",
+                    "product",
+                    "order",
+                    "size",
+                    "color",
+                ],
+                name="unique_user_product_order_orderitems",
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "guest_id",
+                    "product",
+                    "order",
+                    "size",
+                    "color",
+                ],
+                name="unique_guest_product_order_orderitems",
+            ),
+        ]
 
     def clean(self):
         if self.color:

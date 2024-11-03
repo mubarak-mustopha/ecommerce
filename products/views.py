@@ -1,9 +1,15 @@
-from django.db.models import Count, Case, Value, When
+from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db.models import Count, Case, Value, When
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.urls import reverse
+from django.shortcuts import render, get_object_or_404, redirect
 
-from .models import Product, Category, WishList
+from .models import Product, Category, WishList, OrderItem, Order
+from .utils import get_user_or_guest_id
+
+from pprint import pprint as pp
 
 
 # Create your views here.
@@ -16,23 +22,34 @@ def shop(request):
     products = paginator.get_page(page_num).object_list
     page_range = paginator.page_range
 
-    if request.user.is_authenticated:
-        wishlist = request.user.wishlist_set.values_list("product_id", flat=True)
+    user, guest_id = get_user_or_guest_id(request)
+    cart = OrderItem.objects.filter(user=user, guest_id=guest_id).values_list(
+        "product_id", flat=True
+    )
+    wishlist = WishList.objects.filter(user=user, guest_id=guest_id).values_list(
+        "product_id", flat=True
+    )
 
-    else:
-        wishlist = request.session.get("wishlist", [])
-
-    when_clause = When(
+    wishlist_clause = When(
         id__in=wishlist,
         then=Value(True),
     )
-    products = products.annotate(
-        in_wishlist=Case(
-            when_clause,
-            default=Value(False),
-        )
+    cart_clause = When(
+        id__in=cart,
+        then=Value(True),
     )
 
+    products = products.annotate(
+        in_wishlist=Case(
+            wishlist_clause,
+            default=Value(False),
+        ),
+        in_cart=Case(
+            cart_clause,
+            default=Value(False),
+        ),
+    )
+    pp(products.values("name", "in_cart", "in_wishlist"))
     context = {
         "categories": Category.objects.values_list("name", flat=True),
         "products": products,
@@ -44,40 +61,52 @@ def shop(request):
 
 
 def toggle_wishlist(request, pk):
-    data = {}
-    product = Product.objects.filter(id=pk)
+    product = get_object_or_404(Product, id=pk)
 
-    if not product.exists():
-        return JsonResponse(data={"error": "Invalid id for product"}, status=400)
-
-    if request.user.is_authenticated:
-        wishlist, created = WishList.objects.get_or_create(
-            product=product.first(),
-            user=request.user,
-        )
-        if not created:
-            wishlist.delete()
-        data = {"success": True}
-    else:
-        wishlist = request.session.get("wishlist")
-        if not wishlist:
-            wishlist = request.session["wishlist"] = [str(pk)]
-        else:
-            if str(pk) in wishlist:
-                wishlist.remove(str(pk))
-            else:
-                wishlist.append(str(pk))
-        request.session.modified = True
-        data = {"success": True}
-    return JsonResponse(data)
+    user, guest_id = get_user_or_guest_id(request)
+    wishlist, created = WishList.objects.get_or_create(
+        user=user, guest_id=guest_id, product=product
+    )
+    if not created:
+        wishlist.delete()
+    return JsonResponse({"success": True})
 
 
 def wishlist_page(request):
-    if request.user.is_authenticated:
-        wishlist = request.user.wishlist_set.values_list("product_id", flat=True)
-    else:
-        wishlist = request.session.get("wishlist", [])
+    user, guest_id = get_user_or_guest_id(request)
+    wishlist = WishList.objects.filter(user=user, guest_id=guest_id).values_list(
+        "product_id", flat=True
+    )
 
     products = Product.objects.filter(id__in=wishlist).annotate(in_wishlist=Value(True))
 
     return render(request, "products/wishlist.html", {"products": products})
+
+
+def cart_update(request, pk):
+    """
+    Add product to cart from shop page
+    """
+    user, guest_id = get_user_or_guest_id(request)
+    product = get_object_or_404(Product, id=pk)
+
+    orderitem, created = OrderItem.objects.get_or_create(
+        user=user, guest_id=guest_id, product=product
+    )
+    orderitems_count = OrderItem.objects.filter(user=user, guest_id=guest_id).count()
+
+    if created:
+        return JsonResponse({"success": True, "count": orderitems_count}, status=200)
+    else:
+        return JsonResponse({"message": "Already in cart"}, status=302)
+
+
+def cart_view(request):
+    user, guest_id = get_user_or_guest_id(request)
+    orderitems = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
+
+    return render(
+        request,
+        "products/cart.html",
+        {"cartitems": orderitems},
+    )
