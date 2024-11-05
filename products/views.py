@@ -122,8 +122,6 @@ def increment_item(request, pk):
     orderitem, created = OrderItem.objects.get_or_create(
         user=user, guest_id=guest_id, product=product
     )
-    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
-    orderitems_count = sum([item.quantity for item in total_items])
 
     if size := orderitem.size:
         prod_instock = orderitem.product.productsizes.get(size=size).quantity
@@ -147,8 +145,6 @@ def decrement_item(request, pk):
     orderitem, created = OrderItem.objects.get_or_create(
         user=user, guest_id=guest_id, product=product
     )
-    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
-    orderitems_count = sum([item.quantity for item in total_items])
 
     orderitem.quantity -= 1
     if orderitem.quantity > 0:
@@ -167,8 +163,6 @@ def remove_item(request, pk):
     orderitem, created = OrderItem.objects.get_or_create(
         user=user, guest_id=guest_id, product=product
     )
-    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
-    orderitems_count = sum([item.quantity for item in total_items])
 
     orderitem.delete()
     return JsonResponse({"deleted": True})
