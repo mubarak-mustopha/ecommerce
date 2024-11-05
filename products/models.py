@@ -296,6 +296,7 @@ class OrderItem(models.Model):
     def price(self):
         return Product.get_product_price(self.product, self.size)
 
+    @property
     def total_price(self):
         return self.price * self.quantity
 

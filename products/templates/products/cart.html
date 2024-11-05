@@ -28,6 +28,12 @@
                     </th>
                     <td>
                         <p class="mb-0 mt-4">{{cart_item.product.name}}</p>
+                        {% if cart_item.size %}
+                            <small class="text-success">Size: {{cart_item.size}}</small>
+                        {% endif %}
+                        {% if cart_item.color %}
+                            <small class="text-success">Color: {{cart_item.color}}</small>
+                        {% endif %}
                     </td>
                     <td>
                         <p class="mb-0 mt-4">{{cart_item.price|floatformat:2}} $</p>
@@ -36,25 +42,28 @@
                         <div class="input-group quantity mt-4" style="width: 100px;">
                             <div class="input-group-btn">
                                 <button class="btn btn-sm btn-minus rounded-circle bg-light border" 
-                                data-url="{% url 'cart_update' cart_item.id %}">
+                                data-url="{% url 'cart_update' cart_item.product.id %}"
+                                data-index="{{forloop.counter0}}">
                                 <i class="fa fa-minus"></i>
                                 </button>
                             </div>
                             <input type="text" class="form-control form-control-sm text-center border-0" value="{{cart_item.quantity}}">
                             <div class="input-group-btn">
                                 <button class="btn btn-sm btn-plus rounded-circle bg-light border" 
-                                data-url="{% url 'cart_update' cart_item.id %}">
+                                data-url="{% url 'cart_update' cart_item.product.id %}"
+                                data-index="{{forloop.counter0}}">
                                     <i class="fa fa-plus"></i>
                                 </button>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <p class="mb-0 mt-4">{{cart_item.total_price|floatformat:2}} $</p>
+                        <p class="mb-0 mt-4 total_price">{{cart_item.total_price|floatformat:2}} $</p>
                     </td>
                     <td>
                         <button class="btn btn-md rounded-circle bg-light border mt-4" 
-                        data-url="{% url 'cart_update' cart_item.id %}">
+                        data-url="{% url 'cart_update' cart_item.product.id %}"
+                        data-index="{{forloop.counter0}}">
                             <i class="fa fa-times text-danger"></i>
                         </button>
                     </td>
@@ -105,17 +114,50 @@
 {% block script %}
 
     <script>
+            function sendGetRequest(url, data, success, error){
+                    $.ajax({
+                        type: "GET",
+                        url : url,
+                        data: data,
+                        success: success,
+                        error: error,
+                    })
+            }
+
+            
+
+
         let addBtns = document.querySelectorAll(".btn-plus");
         let reduceBtns = document.querySelectorAll(".btn-minus");
+        let removeBtns = document.querySelectorAll(".btn-md");
 
         addBtns.forEach(btn => {
             btn.addEventListener("click", e => {
                 // event auto-registered on the child fontawesome icon   
                 let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;  
-                console.log(btn.dataset.url);   
                 
-                let input = btn.parentElement.previousElementSibling;                   
-                input.value++;
+                sendGetRequest(
+                        btn.dataset.url,
+                        {action: "add", page: "cart"},
+                        json => {
+                            // update input value
+                            let input = btn.parentElement.previousElementSibling;                   
+                            input.value = json["count"];
+
+                            // update total_price 
+                            let total_price = document.querySelectorAll("p.total_price")[parseInt(btn.dataset.index)]
+                            total_price.textContent = `${json["total_price"]} $`;
+                            
+                            console.log("json",json);
+                        },
+                        (xhr, errmsg, err) => {
+                            console.log("Err",err);
+                            console.log("Err msg",errmsg);
+                            console.log("xhr",xhr.status);
+                    });
+                    
+                
+                    
             })
         })
 
@@ -125,10 +167,57 @@
                 let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;
                 console.log(btn.dataset.url);   
 
-                let input = btn.parentElement.nextElementSibling;  
-                input.value--;
+
+                // send request
+                sendGetRequest(
+                        btn.dataset.url,
+                        {action: "reduce", page: "cart"},
+                        json => {
+                            // update input value
+                            let input = btn.parentElement.nextElementSibling;                  
+                            input.value = json["count"];
+
+                            // update total_price 
+                            let total_price = document.querySelectorAll("p.total_price")[parseInt(btn.dataset.index)]
+                            total_price.textContent = `${json["total_price"]} $`;
+                            
+                            console.log("json",json);
+                        },
+                        (xhr, errmsg, err) => {
+                            console.log("Err",err);
+                            console.log("Err msg",errmsg);
+                            console.log("xhr",xhr.status);
+                    });
+                    
             })
         })
+        
+        removeBtns.forEach(btn => {
+            btn.addEventListener("click", e => {
+                // event auto-registered on the child fontawesome icon   
+                let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;  
+                
+                sendGetRequest(
+                        btn.dataset.url,
+                        {action: "remove", page: "cart"},
+                        json => {
+                            let tableRows = document.querySelectorAll("tbody tr");
+                            let index = btn.dataset.index;
+
+                            // remove row from DOM
+                            tableRows[index].style.display = "none";
+                        },
+                        (xhr, errmsg, err) => {
+                            console.log("Err",err);
+                            console.log("Err msg",errmsg);
+                            console.log("xhr",xhr.status);
+                    });
+                    
+                
+                    
+            })
+        })
+
     </script>
 
 {% endblock script %}

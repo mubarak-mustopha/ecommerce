@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.shortcuts import render, get_object_or_404, redirect
 
-from .models import Product, Category, WishList, OrderItem, Order
+from .models import Product, Category, WishList, OrderItem, Order, ProductSize
 from .utils import get_user_or_guest_id
 
 from pprint import pprint as pp
@@ -89,16 +89,114 @@ def cart_update(request, pk):
     """
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
+    print(f"********{product}******")
 
     orderitem, created = OrderItem.objects.get_or_create(
         user=user, guest_id=guest_id, product=product
     )
-    orderitems_count = OrderItem.objects.filter(user=user, guest_id=guest_id).count()
+    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
+    orderitems_count = sum([item.quantity for item in total_items])
 
     if created:
-        return JsonResponse({"success": True, "count": orderitems_count}, status=200)
+        return JsonResponse(
+            {"success": True, "cart_count": orderitems_count}, status=200
+        )
+
+    action = request.GET.get("action")
+
+    if action == "remove":
+        orderitem.delete()
+        return JsonResponse({"deleted": True})
+
+    elif action == "add":
+        if size := orderitem.size:
+            prod_instock = orderitem.product.productsizes.get(size=size).quantity
+        else:
+            prod_instock = orderitem.product.in_stock
+        print(f"*******{prod_instock}*******")
+        if prod_instock >= (orderitem.quantity + 1):
+            orderitem.quantity += 1
+            orderitem.save()
+            return JsonResponse(
+                {"count": orderitem.quantity, "total_price": orderitem.total_price}
+            )
+        else:
+            return JsonResponse(
+                {"error": f"{orderitem.product} out of stock"}, status=400
+            )
+
+    elif action == "reduce":
+        orderitem.quantity -= 1
+        if orderitem.quantity > 0:
+            orderitem.save()
+            return JsonResponse(
+                {"count": orderitem.quantity, "total_price": orderitem.total_price}
+            )
+        else:
+            return JsonResponse(
+                {"error": f"Orderitem can't have zero count."}, status=400
+            )
+
+
+def add_item(request, pk):
+    user, guest_id = get_user_or_guest_id(request)
+    product = get_object_or_404(Product, id=pk)
+
+    orderitem, created = OrderItem.objects.get_or_create(
+        user=user, guest_id=guest_id, product=product
+    )
+    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
+    orderitems_count = sum([item.quantity for item in total_items])
+
+    if created:
+        return JsonResponse(
+            {"success": True, "cart_count": orderitems_count}, status=200
+        )
+
+
+def increment_item(request, pk):
+    user, guest_id = get_user_or_guest_id(request)
+    product = get_object_or_404(Product, id=pk)
+
+    orderitem, created = OrderItem.objects.get_or_create(
+        user=user, guest_id=guest_id, product=product
+    )
+    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
+    orderitems_count = sum([item.quantity for item in total_items])
+
+    if size := orderitem.size:
+        prod_instock = orderitem.product.productsizes.get(size=size).quantity
     else:
-        return JsonResponse({"message": "Already in cart"}, status=302)
+        prod_instock = orderitem.product.in_stock
+
+    if prod_instock >= (orderitem.quantity + 1):
+        orderitem.quantity += 1
+        orderitem.save()
+        return JsonResponse(
+            {"count": orderitem.quantity, "total_price": orderitem.total_price}
+        )
+    else:
+        return JsonResponse({"error": f"{orderitem.product} out of stock"}, status=400)
+
+
+def decrement_item(request, pk):
+    user, guest_id = get_user_or_guest_id(request)
+    product = get_object_or_404(Product, id=pk)
+
+    orderitem, created = OrderItem.objects.get_or_create(
+        user=user, guest_id=guest_id, product=product
+    )
+    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
+    orderitems_count = sum([item.quantity for item in total_items])
+
+    orderitem.quantity -= 1
+    if orderitem.quantity > 0:
+        orderitem.save()
+        return JsonResponse(
+            {"count": orderitem.quantity, "total_price": orderitem.total_price}
+        )
+    else:
+        return JsonResponse({"error": f"Orderitem can't have zero count."}, status=400)
 
 
 def cart_view(request):
