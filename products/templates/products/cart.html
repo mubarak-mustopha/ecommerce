@@ -138,7 +138,7 @@
                 
                 sendGetRequest(
                         btn.dataset.url,
-                        {action: "add", page: "cart"},
+                        {action: "increment", page: "cart"},
                         json => {
                             // update input value
                             let input = btn.parentElement.previousElementSibling;                   
@@ -171,7 +171,7 @@
                 // send request
                 sendGetRequest(
                         btn.dataset.url,
-                        {action: "reduce", page: "cart"},
+                        {action: "decrement", page: "cart"},
                         json => {
                             // update input value
                             let input = btn.parentElement.nextElementSibling;                  

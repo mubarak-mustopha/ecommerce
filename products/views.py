@@ -84,58 +84,19 @@ def wishlist_page(request):
 
 
 def cart_update(request, pk):
-    """
-    Add product to cart from shop page
-    """
-    user, guest_id = get_user_or_guest_id(request)
-    product = get_object_or_404(Product, id=pk)
-    print(f"********{product}******")
-
-    orderitem, created = OrderItem.objects.get_or_create(
-        user=user, guest_id=guest_id, product=product
-    )
-    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
-    orderitems_count = sum([item.quantity for item in total_items])
-
-    if created:
-        return JsonResponse(
-            {"success": True, "cart_count": orderitems_count}, status=200
-        )
-
     action = request.GET.get("action")
 
+    if action == "add":
+        return add_item(request, pk)
+
     if action == "remove":
-        orderitem.delete()
-        return JsonResponse({"deleted": True})
+        return remove_item(request, pk)
 
-    elif action == "add":
-        if size := orderitem.size:
-            prod_instock = orderitem.product.productsizes.get(size=size).quantity
-        else:
-            prod_instock = orderitem.product.in_stock
-        print(f"*******{prod_instock}*******")
-        if prod_instock >= (orderitem.quantity + 1):
-            orderitem.quantity += 1
-            orderitem.save()
-            return JsonResponse(
-                {"count": orderitem.quantity, "total_price": orderitem.total_price}
-            )
-        else:
-            return JsonResponse(
-                {"error": f"{orderitem.product} out of stock"}, status=400
-            )
+    elif action == "increment":
+        return increment_item(request, pk)
 
-    elif action == "reduce":
-        orderitem.quantity -= 1
-        if orderitem.quantity > 0:
-            orderitem.save()
-            return JsonResponse(
-                {"count": orderitem.quantity, "total_price": orderitem.total_price}
-            )
-        else:
-            return JsonResponse(
-                {"error": f"Orderitem can't have zero count."}, status=400
-            )
+    elif action == "decrement":
+        return decrement_item(request, pk)
 
 
 def add_item(request, pk):
@@ -197,6 +158,20 @@ def decrement_item(request, pk):
         )
     else:
         return JsonResponse({"error": f"Orderitem can't have zero count."}, status=400)
+
+
+def remove_item(request, pk):
+    user, guest_id = get_user_or_guest_id(request)
+    product = get_object_or_404(Product, id=pk)
+
+    orderitem, created = OrderItem.objects.get_or_create(
+        user=user, guest_id=guest_id, product=product
+    )
+    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
+    orderitems_count = sum([item.quantity for item in total_items])
+
+    orderitem.delete()
+    return JsonResponse({"deleted": True})
 
 
 def cart_view(request):
