@@ -23,9 +23,9 @@ def shop(request):
     page_range = paginator.page_range
 
     user, guest_id = get_user_or_guest_id(request)
-    cart = OrderItem.objects.filter(user=user, guest_id=guest_id).values_list(
-        "product_id", flat=True
-    )
+    cart = OrderItem.objects.filter(
+        user=user, guest_id=guest_id, order=None
+    ).values_list("product_id", flat=True)
     wishlist = WishList.objects.filter(user=user, guest_id=guest_id).values_list(
         "product_id", flat=True
     )
@@ -104,9 +104,9 @@ def add_item(request, pk):
     product = get_object_or_404(Product, id=pk)
 
     orderitem, created = OrderItem.objects.get_or_create(
-        user=user, guest_id=guest_id, product=product
+        user=user, guest_id=guest_id, product=product, order=None
     )
-    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id)
+    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
     orderitems_count = sum([item.quantity for item in total_items])
 
     if created:
@@ -120,7 +120,10 @@ def increment_item(request, pk):
     product = get_object_or_404(Product, id=pk)
 
     orderitem, created = OrderItem.objects.get_or_create(
-        user=user, guest_id=guest_id, product=product
+        user=user,
+        guest_id=guest_id,
+        product=product,
+        order=None,
     )
 
     if size := orderitem.size:
@@ -143,7 +146,10 @@ def decrement_item(request, pk):
     product = get_object_or_404(Product, id=pk)
 
     orderitem, created = OrderItem.objects.get_or_create(
-        user=user, guest_id=guest_id, product=product
+        user=user,
+        guest_id=guest_id,
+        product=product,
+        order=None,
     )
 
     orderitem.quantity -= 1
@@ -161,7 +167,7 @@ def remove_item(request, pk):
     product = get_object_or_404(Product, id=pk)
 
     orderitem, created = OrderItem.objects.get_or_create(
-        user=user, guest_id=guest_id, product=product
+        user=user, guest_id=guest_id, product=product, order=None
     )
 
     orderitem.delete()
