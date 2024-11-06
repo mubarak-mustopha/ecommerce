@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -126,6 +127,8 @@ def increment_item(request, pk):
         order=None,
     )
 
+    finished = False
+
     if size := orderitem.size:
         prod_instock = orderitem.product.productsizes.get(size=size).quantity
     else:
@@ -134,8 +137,22 @@ def increment_item(request, pk):
     if prod_instock >= (orderitem.quantity + 1):
         orderitem.quantity += 1
         orderitem.save()
+
+        if prod_instock == orderitem.quantity:
+            finished = True
+
+        total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
+        subtotal = sum([item.total_price for item in total_items])
+
         return JsonResponse(
-            {"count": orderitem.quantity, "total_price": orderitem.total_price}
+            {
+                "count": orderitem.quantity,
+                "total_price": orderitem.total_price,
+                "subtotal": subtotal,
+                "shipping": settings.SHIPPING_PRICE,
+                "total": subtotal + settings.SHIPPING_PRICE,
+                "finished": finished,
+            }
         )
     else:
         return JsonResponse({"error": f"{orderitem.product} out of stock"}, status=400)
@@ -155,8 +172,18 @@ def decrement_item(request, pk):
     orderitem.quantity -= 1
     if orderitem.quantity > 0:
         orderitem.save()
+
+        total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
+        subtotal = sum([item.total_price for item in total_items])
+
         return JsonResponse(
-            {"count": orderitem.quantity, "total_price": orderitem.total_price}
+            {
+                "count": orderitem.quantity,
+                "total_price": orderitem.total_price,
+                "subtotal": subtotal,
+                "shipping": settings.SHIPPING_PRICE,
+                "total": subtotal + settings.SHIPPING_PRICE,
+            }
         )
     else:
         return JsonResponse({"error": f"Orderitem can't have zero count."}, status=400)
@@ -171,15 +198,34 @@ def remove_item(request, pk):
     )
 
     orderitem.delete()
-    return JsonResponse({"deleted": True})
+
+    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
+    subtotal = sum([item.total_price for item in total_items])
+
+    return JsonResponse(
+        {
+            "deleted": True,
+            "subtotal": subtotal,
+            "shipping": settings.SHIPPING_PRICE,
+            "total": subtotal + settings.SHIPPING_PRICE,
+        }
+    )
 
 
 def cart_view(request):
     user, guest_id = get_user_or_guest_id(request)
     orderitems = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
 
+    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
+    subtotal = sum([item.total_price for item in total_items])
+
     return render(
         request,
         "products/cart.html",
-        {"cartitems": orderitems},
+        {
+            "cartitems": orderitems,
+            "subtotal": subtotal,
+            "shipping": settings.SHIPPING_PRICE,
+            "total": subtotal + settings.SHIPPING_PRICE,
+        },
     )
