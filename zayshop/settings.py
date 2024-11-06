@@ -165,3 +165,9 @@ from django.contrib.messages import constants as messages
 MESSAGE_TAGS = {
     messages.ERROR: "danger",
 }
+
+
+# SHIPPING SETTINGS
+from decimal import Decimal
+
+SHIPPING_PRICE = Decimal("10.0")
