@@ -182,7 +182,11 @@ class WishList(models.Model):
 class ShippingAddress(models.Model):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="shipping_address",
+    )
     address = models.CharField(max_length=200)
     city = models.CharField(max_length=200)
     state = models.CharField(max_length=200)
@@ -202,6 +206,9 @@ class Order(models.Model):
     )
     order_date = models.DateTimeField(auto_now_add=True)
     completed = models.BooleanField(default=False)
+    shipping_address = models.ForeignKey(
+        ShippingAddress, on_delete=models.SET_NULL, null=True, blank=True
+    )
 
     @property
     def cart_total(self):
