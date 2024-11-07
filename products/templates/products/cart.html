@@ -43,7 +43,8 @@
                             <div class="input-group-btn">
                                 <button class="btn btn-sm btn-minus rounded-circle bg-light border" 
                                 data-url="{% url 'cart_update' cart_item.product.id %}"
-                                data-index="{{forloop.counter0}}">
+                                data-index="{{forloop.counter0}}"
+                                {% if cart_item.quantity == 1 %}disabled{% endif %}>
                                 <i class="fa fa-minus"></i>
                                 </button>
                             </div>
@@ -51,7 +52,8 @@
                             <div class="input-group-btn">
                                 <button class="btn btn-sm btn-plus rounded-circle bg-light border" 
                                 data-url="{% url 'cart_update' cart_item.product.id %}"
-                                data-index="{{forloop.counter0}}">
+                                data-index="{{forloop.counter0}}"
+                                {% if cart_item.quantity == cart_item.product.quantity %}disabled{% endif %}>
                                     <i class="fa fa-plus"></i>
                                 </button>
                             </div>
@@ -75,31 +77,34 @@
 
         <!-- cart subtotal start -->
         {% if cartitems_count > 0 %}
-        <div class="row g-4 justify-content-end">
-            <div class="col-8"></div>
-            <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
-                <div class="bg-light rounded">
-                    <div class="p-4">
-                        <h1 class="display-6 mb-4">Cart <span class="fw-normal">Total</span></h1>
-                        <div class="d-flex justify-content-between mb-4">
-                            <h5 class="mb-0 me-4">Subtotal:</h5>
-                            <p class="mb-0 subtotal">${{ subtotal|floatformat:2 }}</p>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <h5 class="mb-0 me-4">Shipping</h5>
-                            <div class="">
-                                <p class="mb-0">Flat rate: <span class="shipping">${{shipping}}</span></p>
+        <form action="{% url 'cart' %}" method="POST">
+            {% csrf_token %}
+            <div class="row g-4 justify-content-end">
+                <div class="col-8"></div>
+                <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
+                    <div class="bg-light rounded">
+                        <div class="p-4">
+                            <h1 class="display-6 mb-4">Cart <span class="fw-normal">Total</span></h1>
+                            <div class="d-flex justify-content-between mb-4">
+                                <h5 class="mb-0 me-4">Subtotal:</h5>
+                                <p class="mb-0 subtotal">${{ subtotal|floatformat:2 }}</p>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <h5 class="mb-0 me-4">Shipping</h5>
+                                <div class="">
+                                    <p class="mb-0">Flat rate: <span class="shipping">${{shipping}}</span></p>
+                                </div>
                             </div>
                         </div>
+                        <div class="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
+                            <h5 class="mb-0 ps-4 me-4">Total</h5>
+                            <p class="mb-0 pe-4 total">${{total|floatformat:2}}</p>
+                        </div>
+                        <button class="btn btn-outline-success rounded-pill px-4 py-3 text-uppercase mb-4 ms-4" type="submit">Proceed Checkout</button>
                     </div>
-                    <div class="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
-                        <h5 class="mb-0 ps-4 me-4">Total</h5>
-                        <p class="mb-0 pe-4 total">${{total|floatformat:2}}</p>
-                    </div>
-                    <button class="btn btn-outline-success rounded-pill px-4 py-3 text-uppercase mb-4 ms-4" type="button">Proceed Checkout</button>
                 </div>
             </div>
-        </div>
+        </form>
         {% else %}
         <p>Your can is currently empty. Go to <a href="{% url 'shop' %}">shop page</a> to add items
             to cart.</p>
@@ -144,7 +149,14 @@
                     // update shipping
                     document.querySelector("p.total").textContent = `${json['total']} $`;
                     
-                    
+                    // disable btns
+                    let addBtn = addBtns[index];
+                    if (json['finished']) addBtn.disabled = true;
+                    else addBtn.disabled = false;
+
+                    let reduceBtn = reduceBtns[index];
+                    if (parseInt(json['count']) == 1) reduceBtn.disabled = true;
+                    else reduceBtn.disabled = false;
                     
         }
 
