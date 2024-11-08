@@ -24,9 +24,13 @@ def shop(request):
     page_range = paginator.page_range
 
     user, guest_id = get_user_or_guest_id(request)
-    cart = OrderItem.objects.filter(
-        user=user, guest_id=guest_id, order=None
-    ).values_list("product_id", flat=True)
+    cart, created = Order.objects.get_or_create(
+        user=user,
+        guest_id=guest_id,
+        status="PENDING"
+    )
+    cart = cart.orderitems.values_list("product_id", flat=True)
+
     wishlist = WishList.objects.filter(user=user, guest_id=guest_id).values_list(
         "product_id", flat=True
     )
@@ -104,11 +108,12 @@ def add_item(request, pk):
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
 
-    orderitem, created = OrderItem.objects.get_or_create(
-        user=user, guest_id=guest_id, product=product, order=None
+    order, _ = Order.objects.get_or_create(
+        user=user, guest_id=guest_id, status="PENDING"
     )
-    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
-    orderitems_count = sum([item.quantity for item in total_items])
+    orderitem, created = OrderItem.objects.get_or_create(product=product, order=order)
+
+    orderitems_count = len(order)
 
     if created:
         return JsonResponse(
@@ -120,13 +125,8 @@ def increment_item(request, pk):
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
 
-    orderitem, created = OrderItem.objects.get_or_create(
-        user=user,
-        guest_id=guest_id,
-        product=product,
-        order=None,
-    )
-
+    order = Order.objects.get(user=user, guest_id=guest_id, status="PENDING")
+    orderitem = get_object_or_404(OrderItem, product=product, order=order)
     finished = False
 
     if size := orderitem.size:
@@ -141,8 +141,7 @@ def increment_item(request, pk):
         if prod_instock == orderitem.quantity:
             finished = True
 
-        total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
-        subtotal = sum([item.total_price for item in total_items])
+        subtotal = order.cart_total
 
         return JsonResponse(
             {
@@ -162,19 +161,14 @@ def decrement_item(request, pk):
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
 
-    orderitem, created = OrderItem.objects.get_or_create(
-        user=user,
-        guest_id=guest_id,
-        product=product,
-        order=None,
-    )
+    order = Order.objects.get(user=user, guest_id=guest_id, status="PENDING")
+    orderitem = get_object_or_404(OrderItem, product=product, order=order)
 
     orderitem.quantity -= 1
     if orderitem.quantity > 0:
         orderitem.save()
 
-        total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
-        subtotal = sum([item.total_price for item in total_items])
+        subtotal = order.cart_total
 
         return JsonResponse(
             {
@@ -193,14 +187,15 @@ def remove_item(request, pk):
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
 
+    order = Order.objects.get(user=user, guest_id=guest_id, status="PENDING")
     orderitem, created = OrderItem.objects.get_or_create(
-        user=user, guest_id=guest_id, product=product, order=None
+        order=order,
+        product=product,
     )
 
     orderitem.delete()
 
-    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
-    subtotal = sum([item.total_price for item in total_items])
+    subtotal = order.cart_total
 
     return JsonResponse(
         {
@@ -214,16 +209,15 @@ def remove_item(request, pk):
 
 def cart_view(request):
     user, guest_id = get_user_or_guest_id(request)
-    orderitems = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
+    order = Order.objects.filter(user=user, guest_id=guest_id, status="PENDING").first()
 
-    total_items = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
-    subtotal = sum([item.total_price for item in total_items])
+    subtotal = order.cart_total
 
     return render(
         request,
         "products/cart.html",
         {
-            "cartitems": orderitems,
+            "cart": order,
             "subtotal": subtotal,
             "shipping": settings.SHIPPING_PRICE,
             "total": subtotal + settings.SHIPPING_PRICE,
