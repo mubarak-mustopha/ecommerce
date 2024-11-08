@@ -20,9 +20,14 @@ class ProductAdmin(admin.ModelAdmin):
     inlines = [ProductImageInline, ProductSizeInline]
 
 
+class OrderAdmin(admin.ModelAdmin):
+    model = Order
+    list_display = ("user", "guest_id", "status")
+
+
 class OrderItemAdmin(admin.ModelAdmin):
     model = OrderItem
-    list_display = ("user", "guest_id", "product", "quantity")
+    list_display = ("order", "color", "size", "product", "quantity")
 
 
 admin.site.register(Product, ProductAdmin)
@@ -30,4 +35,4 @@ admin.site.register(OrderItem, OrderItemAdmin)
 admin.site.register(Color)
 admin.site.register(Category)
 admin.site.register(Brand)
-admin.site.register(Order)
+admin.site.register(Order, OrderAdmin)

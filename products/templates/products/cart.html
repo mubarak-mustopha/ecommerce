@@ -19,7 +19,7 @@
             </thead>
 
             <tbody>
-                {% for cart_item in cartitems %}
+                {% for cart_item in cart %}
                 <tr>
                     <th scope="row">
                         <div class="d-flex align-items-center">
@@ -29,10 +29,10 @@
                     <td>
                         <p class="mb-0 mt-4">{{cart_item.product.name}}</p>
                         {% if cart_item.size %}
-                            <small class="text-success">Size: {{cart_item.size}}</small>
+                            <small class="text-success size">Size: {{cart_item.size}}</small>
                         {% endif %}
                         {% if cart_item.color %}
-                            <small class="text-success">Color: {{cart_item.color}}</small>
+                            <small class="text-success color">Color: {{cart_item.color}}</small>
                         {% endif %}
                     </td>
                     <td>
@@ -225,6 +225,7 @@
 
                             // update subtotal
                             document.querySelector("p.subtotal").textContent = `${json['subtotal']} $`;
+                            document.querySelector("p.total").textContent = `${json['total']} $`;
                         },
                         (xhr, errmsg, err) => {
                             console.log("Err",err);
