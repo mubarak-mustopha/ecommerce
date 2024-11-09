@@ -28,12 +28,26 @@
                     </th>
                     <td>
                         <p class="mb-0 mt-4">{{cart_item.product.name}}</p>
-                        {% if cart_item.size %}
-                            <small class="text-success size">Size: {{cart_item.size}}</small>
-                        {% endif %}
-                        {% if cart_item.color %}
-                            <small class="text-success color">Color: {{cart_item.color}}</small>
-                        {% endif %}
+
+                        <!-- item size -->
+                        {% with size=cart_item.size %}
+                            {% if size %}
+                                <small class="text-success size" 
+                                data-value="{{size}}"
+                                data-index="{{forloop.counter0}}">Size: {{size}}</small>
+                            {% endif %}
+                        {% endwith %}
+                        <!-- item size end -->
+
+                        <!-- item color -->
+                        {% with color=cart_item.color %}
+                            {% if cart_item.color %}
+                                <small class="text-success color"
+                                data-value="{{color}}"
+                                data-index="{{forloop.counter0}}">Color: {{color}}</small>                            
+                            {% endif %}
+                        {% endwith %}
+                        <!-- item color end -->
                     </td>
                     <td>
                         <p class="mb-0 mt-4">{{cart_item.price|floatformat:2}} $</p>
@@ -53,7 +67,7 @@
                                 <button class="btn btn-sm btn-plus rounded-circle bg-light border" 
                                 data-url="{% url 'cart_update' cart_item.product.id %}"
                                 data-index="{{forloop.counter0}}"
-                                {% if cart_item.quantity == cart_item.product.quantity %}disabled{% endif %}>
+                                {% if cart_item.quantity == cart_item.num_prod_instock %}disabled{% endif %}>
                                     <i class="fa fa-plus"></i>
                                 </button>
                             </div>
@@ -77,8 +91,6 @@
 
         <!-- cart subtotal start -->
         {% if cartitems_count > 0 %}
-        <form action="{% url 'cart' %}" method="POST">
-            {% csrf_token %}
             <div class="row g-4 justify-content-end">
                 <div class="col-8"></div>
                 <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
@@ -100,11 +112,11 @@
                             <h5 class="mb-0 ps-4 me-4">Total</h5>
                             <p class="mb-0 pe-4 total">${{total|floatformat:2}}</p>
                         </div>
-                        <button class="btn btn-outline-success rounded-pill px-4 py-3 text-uppercase mb-4 ms-4" type="submit">Proceed Checkout</button>
+                        <a class="btn btn-outline-success rounded-pill px-4 py-3 text-uppercase mb-4 ms-4" 
+                        type="submit" href="/">Proceed Checkout</a>
                     </div>
                 </div>
             </div>
-        </form>
         {% else %}
         <p>Your can is currently empty. Go to <a href="{% url 'shop' %}">shop page</a> to add items
             to cart.</p>
@@ -127,6 +139,12 @@
                         error: error,
                     })
             }
+
+        function getItemSizeColor(index){
+            let size = document.querySelector(`small.size[data-index='${index}']`);
+            let color = document.querySelector(`small.color[data-index='${index}']`);
+            return [size?.dataset.value, color?.dataset.value ];
+        }
 
         function updateDOM(json, btn){
 
@@ -169,10 +187,17 @@
             btn.addEventListener("click", e => {
                 // event auto-registered on the child fontawesome icon   
                 let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;  
+                let data = {action: "increment", page: "cart"};
+                let [size, color] = getItemSizeColor(btn.dataset.index);
+
+                if (size) data["size"] = size;
+                if (color) data["color"] = color;
+                
+                console.log(data);
                 
                 sendGetRequest(
                         btn.dataset.url,
-                        {action: "increment", page: "cart"},
+                        data,
                         json => {
                             updateDOM(json, btn);                         
                         },
@@ -189,13 +214,18 @@
             btn.addEventListener("click", e => {
                 // event auto-registered on the child fontawesome icon
                 let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;
-                console.log(btn.dataset.url);   
+                let data = {action: "decrement", page: "cart"};
+                let [size, color] = getItemSizeColor(btn.dataset.index);
 
+                if (size) data["size"] = size;
+                if (color) data["color"] = color;
 
+                console.log(data);
+                
                 // send request
                 sendGetRequest(
                         btn.dataset.url,
-                        {action: "decrement", page: "cart"},
+                        data,
                         json => {
                             updateDOM(json, btn)                          
                         },
@@ -212,10 +242,15 @@
             btn.addEventListener("click", e => {
                 // event auto-registered on the child fontawesome icon   
                 let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;  
+                let data = {action: "remove", page: "cart"}; 
+                let [size, color] = getItemSizeColor(btn.dataset.index)
+
+                if (size) data["size"] = size;
+                if (color) data["color"] = color;
                 
                 sendGetRequest(
                         btn.dataset.url,
-                        {action: "remove", page: "cart"},
+                        data,
                         json => {
                             let tableRows = document.querySelectorAll("tbody tr");
                             let index = btn.dataset.index;

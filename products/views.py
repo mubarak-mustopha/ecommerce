@@ -25,9 +25,7 @@ def shop(request):
 
     user, guest_id = get_user_or_guest_id(request)
     cart, created = Order.objects.get_or_create(
-        user=user,
-        guest_id=guest_id,
-        status="PENDING"
+        user=user, guest_id=guest_id, status="PENDING"
     )
     cart = cart.orderitems.values_list("product_id", flat=True)
 
@@ -90,121 +88,73 @@ def wishlist_page(request):
 
 def cart_update(request, pk):
     action = request.GET.get("action")
-
-    if action == "add":
-        return add_item(request, pk)
-
-    if action == "remove":
-        return remove_item(request, pk)
-
-    elif action == "increment":
-        return increment_item(request, pk)
-
-    elif action == "decrement":
-        return decrement_item(request, pk)
-
-
-def add_item(request, pk):
-    user, guest_id = get_user_or_guest_id(request)
-    product = get_object_or_404(Product, id=pk)
-
-    order, _ = Order.objects.get_or_create(
-        user=user, guest_id=guest_id, status="PENDING"
-    )
-    orderitem, created = OrderItem.objects.get_or_create(product=product, order=order)
-
-    orderitems_count = len(order)
-
-    if created:
-        return JsonResponse(
-            {"success": True, "cart_count": orderitems_count}, status=200
-        )
-
-
-def increment_item(request, pk):
+    size = request.GET.get("size", "")
+    color = request.GET.get("color", "")
+    
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
 
     order = Order.objects.get(user=user, guest_id=guest_id, status="PENDING")
-    orderitem = get_object_or_404(OrderItem, product=product, order=order)
-    finished = False
 
-    if size := orderitem.size:
-        prod_instock = orderitem.product.productsizes.get(size=size).quantity
-    else:
-        prod_instock = orderitem.product.in_stock
+    if action == "add":
+        _, created = OrderItem.objects.get_or_create(
+            order=order,
+            product=product,
+            size=size,
+            color=color,
+        )
+        if created:
+            return JsonResponse({"success": True, "cart_count": len(order)}, status=200)
 
-    if prod_instock >= (orderitem.quantity + 1):
-        orderitem.quantity += 1
-        orderitem.save()
+        else:
+            return JsonResponse(
+                {"message": "Product alreay exists in cart"}, status=400
+            )
+
+    data = {}
+    orderitem = get_object_or_404(
+        OrderItem, product=product, order=order, size=size, color=color
+    )
+
+    if action == "remove":
+        orderitem.delete()
+        data["deleted"] = True
+
+    elif action == "increment":
+        finished = False
+        if item_size := orderitem.size:
+            prod_instock = orderitem.product.productsizes.get(size=item_size).quantity
+        else:
+            prod_instock = orderitem.product.in_stock
+
+        if prod_instock >= (orderitem.quantity + 1):
+            orderitem.quantity += 1
+            orderitem.save()
 
         if prod_instock == orderitem.quantity:
             finished = True
-
-        subtotal = order.cart_total
-
-        return JsonResponse(
-            {
-                "count": orderitem.quantity,
-                "total_price": orderitem.total_price,
-                "subtotal": subtotal,
-                "shipping": settings.SHIPPING_PRICE,
-                "total": subtotal + settings.SHIPPING_PRICE,
-                "finished": finished,
-            }
-        )
-    else:
-        return JsonResponse({"error": f"{orderitem.product} out of stock"}, status=400)
-
-
-def decrement_item(request, pk):
-    user, guest_id = get_user_or_guest_id(request)
-    product = get_object_or_404(Product, id=pk)
-
-    order = Order.objects.get(user=user, guest_id=guest_id, status="PENDING")
-    orderitem = get_object_or_404(OrderItem, product=product, order=order)
-
-    orderitem.quantity -= 1
-    if orderitem.quantity > 0:
-        orderitem.save()
-
-        subtotal = order.cart_total
-
-        return JsonResponse(
-            {
-                "count": orderitem.quantity,
-                "total_price": orderitem.total_price,
-                "subtotal": subtotal,
-                "shipping": settings.SHIPPING_PRICE,
-                "total": subtotal + settings.SHIPPING_PRICE,
-            }
-        )
-    else:
-        return JsonResponse({"error": f"Orderitem can't have zero count."}, status=400)
-
-
-def remove_item(request, pk):
-    user, guest_id = get_user_or_guest_id(request)
-    product = get_object_or_404(Product, id=pk)
-
-    order = Order.objects.get(user=user, guest_id=guest_id, status="PENDING")
-    orderitem, created = OrderItem.objects.get_or_create(
-        order=order,
-        product=product,
-    )
-
-    orderitem.delete()
-
-    subtotal = order.cart_total
-
-    return JsonResponse(
-        {
-            "deleted": True,
-            "subtotal": subtotal,
-            "shipping": settings.SHIPPING_PRICE,
-            "total": subtotal + settings.SHIPPING_PRICE,
+        data = {
+            "count": orderitem.quantity,
+            "total_price": orderitem.total_price,
+            "finished": finished,
         }
-    )
+
+    elif action == "decrement":
+        orderitem.quantity -= 1
+        if orderitem.quantity > 0:
+            orderitem.save()
+
+            data = {"count": orderitem.quantity, "total_price": orderitem.total_price}
+
+        else:
+            return JsonResponse(
+                {"error": f"Orderitem can't have quantity zero."}, status=400
+            )
+
+    data["subtotal"] = order.cart_total
+    data["shipping"] = settings.SHIPPING_PRICE
+    data["total"] = order.cart_total + settings.SHIPPING_PRICE
+    return JsonResponse(data, status=200)
 
 
 def cart_view(request):

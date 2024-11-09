@@ -97,6 +97,12 @@ class Product(BaseContentModel):
             return product.price
         return ProductSize.objects.get(product=product, size=size).price
 
+    @staticmethod
+    def get_available_quantity(product, size=None):
+        if not size:
+            return product.in_stock
+        return ProductSize.objects.get(product=product, size=size).quantity
+
 
 class ProductImage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -315,6 +321,13 @@ class OrderItem(models.Model):
     @property
     def price(self):
         return Product.get_product_price(self.product, self.size)
+
+    @property
+    def num_prod_instock(self):
+        """Get number of products in stock for a given
+        order item
+        """
+        return Product.get_available_quantity(self.product, self.size)
 
     @property
     def total_price(self):
