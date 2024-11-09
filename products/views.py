@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Count, Case, Value, When
@@ -7,8 +7,10 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.shortcuts import render, get_object_or_404, redirect
 
-from .models import Product, Category, WishList, OrderItem, Order, ProductSize
+from .forms import ShippingAddressForm
+from .models import Product, Category, WishList, OrderItem, Order, ShippingAddress
 from .utils import get_user_or_guest_id
+
 
 from pprint import pprint as pp
 
@@ -90,7 +92,7 @@ def cart_update(request, pk):
     action = request.GET.get("action")
     size = request.GET.get("size", "")
     color = request.GET.get("color", "")
-    
+
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
 
@@ -168,6 +170,30 @@ def cart_view(request):
         "products/cart.html",
         {
             "cart": order,
+            "subtotal": subtotal,
+            "shipping": settings.SHIPPING_PRICE,
+            "total": subtotal + settings.SHIPPING_PRICE,
+        },
+    )
+
+
+@login_required
+def checkout(request):
+    user = request.user
+    order = get_object_or_404(Order, user=user, status="PENDING")
+    subtotal = order.cart_total
+
+    user_address = (
+        ShippingAddress.objects.filter(user=user).order_by("-date_added").first()
+    )
+    shipping_form = ShippingAddressForm(instance=user_address)
+
+    return render(
+        request,
+        "products/checkout.html",
+        context={
+            "form": shipping_form,
+            "order": order,
             "subtotal": subtotal,
             "shipping": settings.SHIPPING_PRICE,
             "total": subtotal + settings.SHIPPING_PRICE,
