@@ -95,13 +95,14 @@
     function toggleCart(e){
         let classList = e.target.classList;
         let dataset = e.target.dataset;
-
+        console.log(e.target);
+        
         sendGetRequest(
             dataset.requestUrl,
             {action: dataset.action},
             json => {
                 e.target.parentElement.parentElement.style.display = "none";
-                document.querySelector("span.cartitems_count").textContent = json['count'];
+                document.querySelector("span.cartitems_count").textContent = json['cart_count'];
                
         },
             (xhr, errmsg, err) => {
@@ -119,7 +120,8 @@
         
     }
 
-    $(".list-unstyled.actions").click(function(e){
+    document.querySelectorAll(".list-unstyled.actions").forEach( elm => {
+        elm.addEventListener("click",(function(e){
         e.preventDefault();
         //Do something if only <i></i>
         if (e.target.nodeName == "I"){             
@@ -129,7 +131,10 @@
                     else toggleCart(e);
                 }
         
-    })
+    }))
+}
+    )
+    
 </script>
 
 {% endblock script %}

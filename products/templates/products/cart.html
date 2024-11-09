@@ -19,7 +19,7 @@
             </thead>
 
             <tbody>
-                {% for cart_item in cartitems %}
+                {% for cart_item in cart %}
                 <tr>
                     <th scope="row">
                         <div class="d-flex align-items-center">
@@ -28,6 +28,26 @@
                     </th>
                     <td>
                         <p class="mb-0 mt-4">{{cart_item.product.name}}</p>
+
+                        <!-- item size -->
+                        {% with size=cart_item.size %}
+                            {% if size %}
+                                <small class="text-success size" 
+                                data-value="{{size}}"
+                                data-index="{{forloop.counter0}}">Size: {{size}}</small>
+                            {% endif %}
+                        {% endwith %}
+                        <!-- item size end -->
+
+                        <!-- item color -->
+                        {% with color=cart_item.color %}
+                            {% if cart_item.color %}
+                                <small class="text-success color"
+                                data-value="{{color}}"
+                                data-index="{{forloop.counter0}}">Color: {{color}}</small>                            
+                            {% endif %}
+                        {% endwith %}
+                        <!-- item color end -->
                     </td>
                     <td>
                         <p class="mb-0 mt-4">{{cart_item.price|floatformat:2}} $</p>
@@ -36,25 +56,30 @@
                         <div class="input-group quantity mt-4" style="width: 100px;">
                             <div class="input-group-btn">
                                 <button class="btn btn-sm btn-minus rounded-circle bg-light border" 
-                                data-url="{% url 'cart_update' cart_item.id %}">
+                                data-url="{% url 'cart_update' cart_item.product.id %}"
+                                data-index="{{forloop.counter0}}"
+                                {% if cart_item.quantity == 1 %}disabled{% endif %}>
                                 <i class="fa fa-minus"></i>
                                 </button>
                             </div>
                             <input type="text" class="form-control form-control-sm text-center border-0" value="{{cart_item.quantity}}">
                             <div class="input-group-btn">
                                 <button class="btn btn-sm btn-plus rounded-circle bg-light border" 
-                                data-url="{% url 'cart_update' cart_item.id %}">
+                                data-url="{% url 'cart_update' cart_item.product.id %}"
+                                data-index="{{forloop.counter0}}"
+                                {% if cart_item.quantity == cart_item.num_prod_instock %}disabled{% endif %}>
                                     <i class="fa fa-plus"></i>
                                 </button>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <p class="mb-0 mt-4">{{cart_item.total_price|floatformat:2}} $</p>
+                        <p class="mb-0 mt-4 total_price">{{cart_item.total_price|floatformat:2}} $</p>
                     </td>
                     <td>
                         <button class="btn btn-md rounded-circle bg-light border mt-4" 
-                        data-url="{% url 'cart_update' cart_item.id %}">
+                        data-url="{% url 'cart_update' cart_item.product.id %}"
+                        data-index="{{forloop.counter0}}">
                             <i class="fa fa-times text-danger"></i>
                         </button>
                     </td>
@@ -66,32 +91,32 @@
 
         <!-- cart subtotal start -->
         {% if cartitems_count > 0 %}
-        <div class="row g-4 justify-content-end">
-            <div class="col-8"></div>
-            <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
-                <div class="bg-light rounded">
-                    <div class="p-4">
-                        <h1 class="display-6 mb-4">Cart <span class="fw-normal">Total</span></h1>
-                        <div class="d-flex justify-content-between mb-4">
-                            <h5 class="mb-0 me-4">Subtotal:</h5>
-                            <p class="mb-0">$96.00</p>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <h5 class="mb-0 me-4">Shipping</h5>
-                            <div class="">
-                                <p class="mb-0">Flat rate: $3.00</p>
+            <div class="row g-4 justify-content-end">
+                <div class="col-8"></div>
+                <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
+                    <div class="bg-light rounded">
+                        <div class="p-4">
+                            <h1 class="display-6 mb-4">Cart <span class="fw-normal">Total</span></h1>
+                            <div class="d-flex justify-content-between mb-4">
+                                <h5 class="mb-0 me-4">Subtotal:</h5>
+                                <p class="mb-0 subtotal">${{ subtotal|floatformat:2 }}</p>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <h5 class="mb-0 me-4">Shipping</h5>
+                                <div class="">
+                                    <p class="mb-0">Flat rate: <span class="shipping">${{shipping}}</span></p>
+                                </div>
                             </div>
                         </div>
-                        <p class="mb-0 text-end">Shipping to Ukraine.</p>
+                        <div class="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
+                            <h5 class="mb-0 ps-4 me-4">Total</h5>
+                            <p class="mb-0 pe-4 total">${{total|floatformat:2}}</p>
+                        </div>
+                        <a class="btn btn-outline-success rounded-pill px-4 py-3 text-uppercase mb-4 ms-4" 
+                        type="submit" href="/">Proceed Checkout</a>
                     </div>
-                    <div class="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
-                        <h5 class="mb-0 ps-4 me-4">Total</h5>
-                        <p class="mb-0 pe-4">$99.00</p>
-                    </div>
-                    <button class="btn btn-outline-success rounded-pill px-4 py-3 text-uppercase mb-4 ms-4" type="button">Proceed Checkout</button>
                 </div>
             </div>
-        </div>
         {% else %}
         <p>Your can is currently empty. Go to <a href="{% url 'shop' %}">shop page</a> to add items
             to cart.</p>
@@ -105,17 +130,83 @@
 {% block script %}
 
     <script>
+        function sendGetRequest(url, data, success, error){
+                    $.ajax({
+                        type: "GET",
+                        url : url,
+                        data: data,
+                        success: success,
+                        error: error,
+                    })
+            }
+
+        function getItemSizeColor(index){
+            let size = document.querySelector(`small.size[data-index='${index}']`);
+            let color = document.querySelector(`small.color[data-index='${index}']`);
+            return [size?.dataset.value, color?.dataset.value ];
+        }
+
+        function updateDOM(json, btn){
+
+                    // btn dom index
+                    let index = parseInt(btn.dataset.index);
+                    // update input value
+                    let input = btn.parentElement.previousElementSibling || btn.parentElement.nextElementSibling;                   
+                    input.value = json["count"];
+
+                    // update total_price 
+                    let total_price = document.querySelectorAll("p.total_price")[index];
+                    total_price.textContent = `${json["total_price"]} $`;
+
+                    // update subtotal
+                    document.querySelector("p.subtotal").textContent = `${json['subtotal']} $`;
+
+                    // update shipping
+                    document.querySelector("span.shipping").textContent = `${json['shipping']} $`;
+                    
+                    // update shipping
+                    document.querySelector("p.total").textContent = `${json['total']} $`;
+                    
+                    // disable btns
+                    let addBtn = addBtns[index];
+                    if (json['finished']) addBtn.disabled = true;
+                    else addBtn.disabled = false;
+
+                    let reduceBtn = reduceBtns[index];
+                    if (parseInt(json['count']) == 1) reduceBtn.disabled = true;
+                    else reduceBtn.disabled = false;
+                    
+        }
+
+
         let addBtns = document.querySelectorAll(".btn-plus");
         let reduceBtns = document.querySelectorAll(".btn-minus");
+        let removeBtns = document.querySelectorAll(".btn-md");
 
         addBtns.forEach(btn => {
             btn.addEventListener("click", e => {
                 // event auto-registered on the child fontawesome icon   
                 let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;  
-                console.log(btn.dataset.url);   
+                let data = {action: "increment", page: "cart"};
+                let [size, color] = getItemSizeColor(btn.dataset.index);
+
+                if (size) data["size"] = size;
+                if (color) data["color"] = color;
                 
-                let input = btn.parentElement.previousElementSibling;                   
-                input.value++;
+                console.log(data);
+                
+                sendGetRequest(
+                        btn.dataset.url,
+                        data,
+                        json => {
+                            updateDOM(json, btn);                         
+                        },
+                        (xhr, errmsg, err) => {
+                            console.log("Err",err);
+                            console.log("Err msg",errmsg);
+                            console.log("xhr",xhr.status);
+                    });  
+                    
             })
         })
 
@@ -123,12 +214,65 @@
             btn.addEventListener("click", e => {
                 // event auto-registered on the child fontawesome icon
                 let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;
-                console.log(btn.dataset.url);   
+                let data = {action: "decrement", page: "cart"};
+                let [size, color] = getItemSizeColor(btn.dataset.index);
 
-                let input = btn.parentElement.nextElementSibling;  
-                input.value--;
+                if (size) data["size"] = size;
+                if (color) data["color"] = color;
+
+                console.log(data);
+                
+                // send request
+                sendGetRequest(
+                        btn.dataset.url,
+                        data,
+                        json => {
+                            updateDOM(json, btn)                          
+                        },
+                        (xhr, errmsg, err) => {
+                            console.log("Err",err);
+                            console.log("Err msg",errmsg);
+                            console.log("xhr",xhr.status);
+                    });
+                    
             })
         })
+        
+        removeBtns.forEach(btn => {
+            btn.addEventListener("click", e => {
+                // event auto-registered on the child fontawesome icon   
+                let btn = (e.target.nodeName == "BUTTON")? e.target: e.target.parentElement;  
+                let data = {action: "remove", page: "cart"}; 
+                let [size, color] = getItemSizeColor(btn.dataset.index)
+
+                if (size) data["size"] = size;
+                if (color) data["color"] = color;
+                
+                sendGetRequest(
+                        btn.dataset.url,
+                        data,
+                        json => {
+                            let tableRows = document.querySelectorAll("tbody tr");
+                            let index = btn.dataset.index;
+                            
+                            // remove row from DOM
+                            tableRows[index].style.display = "none";
+
+                            // update subtotal
+                            document.querySelector("p.subtotal").textContent = `${json['subtotal']} $`;
+                            document.querySelector("p.total").textContent = `${json['total']} $`;
+                        },
+                        (xhr, errmsg, err) => {
+                            console.log("Err",err);
+                            console.log("Err msg",errmsg);
+                            console.log("xhr",xhr.status);
+                    });
+                    
+                
+                    
+            })
+        })
+
     </script>
 
 {% endblock script %}

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -6,7 +7,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.shortcuts import render, get_object_or_404, redirect
 
-from .models import Product, Category, WishList, OrderItem, Order
+from .models import Product, Category, WishList, OrderItem, Order, ProductSize
 from .utils import get_user_or_guest_id
 
 from pprint import pprint as pp
@@ -23,9 +24,11 @@ def shop(request):
     page_range = paginator.page_range
 
     user, guest_id = get_user_or_guest_id(request)
-    cart = OrderItem.objects.filter(user=user, guest_id=guest_id).values_list(
-        "product_id", flat=True
+    cart, created = Order.objects.get_or_create(
+        user=user, guest_id=guest_id, status="PENDING"
     )
+    cart = cart.orderitems.values_list("product_id", flat=True)
+
     wishlist = WishList.objects.filter(user=user, guest_id=guest_id).values_list(
         "product_id", flat=True
     )
@@ -84,29 +87,89 @@ def wishlist_page(request):
 
 
 def cart_update(request, pk):
-    """
-    Add product to cart from shop page
-    """
+    action = request.GET.get("action")
+    size = request.GET.get("size", "")
+    color = request.GET.get("color", "")
+    
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
 
-    orderitem, created = OrderItem.objects.get_or_create(
-        user=user, guest_id=guest_id, product=product
-    )
-    orderitems_count = OrderItem.objects.filter(user=user, guest_id=guest_id).count()
+    order = Order.objects.get(user=user, guest_id=guest_id, status="PENDING")
 
-    if created:
-        return JsonResponse({"success": True, "count": orderitems_count}, status=200)
-    else:
-        return JsonResponse({"message": "Already in cart"}, status=302)
+    if action == "add":
+        _, created = OrderItem.objects.get_or_create(
+            order=order,
+            product=product,
+            size=size,
+            color=color,
+        )
+        if created:
+            return JsonResponse({"success": True, "cart_count": len(order)}, status=200)
+
+        else:
+            return JsonResponse(
+                {"message": "Product alreay exists in cart"}, status=400
+            )
+
+    data = {}
+    orderitem = get_object_or_404(
+        OrderItem, product=product, order=order, size=size, color=color
+    )
+
+    if action == "remove":
+        orderitem.delete()
+        data["deleted"] = True
+
+    elif action == "increment":
+        finished = False
+        if item_size := orderitem.size:
+            prod_instock = orderitem.product.productsizes.get(size=item_size).quantity
+        else:
+            prod_instock = orderitem.product.in_stock
+
+        if prod_instock >= (orderitem.quantity + 1):
+            orderitem.quantity += 1
+            orderitem.save()
+
+        if prod_instock == orderitem.quantity:
+            finished = True
+        data = {
+            "count": orderitem.quantity,
+            "total_price": orderitem.total_price,
+            "finished": finished,
+        }
+
+    elif action == "decrement":
+        orderitem.quantity -= 1
+        if orderitem.quantity > 0:
+            orderitem.save()
+
+            data = {"count": orderitem.quantity, "total_price": orderitem.total_price}
+
+        else:
+            return JsonResponse(
+                {"error": f"Orderitem can't have quantity zero."}, status=400
+            )
+
+    data["subtotal"] = order.cart_total
+    data["shipping"] = settings.SHIPPING_PRICE
+    data["total"] = order.cart_total + settings.SHIPPING_PRICE
+    return JsonResponse(data, status=200)
 
 
 def cart_view(request):
     user, guest_id = get_user_or_guest_id(request)
-    orderitems = OrderItem.objects.filter(user=user, guest_id=guest_id, order=None)
+    order = Order.objects.filter(user=user, guest_id=guest_id, status="PENDING").first()
+
+    subtotal = order.cart_total
 
     return render(
         request,
         "products/cart.html",
-        {"cartitems": orderitems},
+        {
+            "cart": order,
+            "subtotal": subtotal,
+            "shipping": settings.SHIPPING_PRICE,
+            "total": subtotal + settings.SHIPPING_PRICE,
+        },
     )

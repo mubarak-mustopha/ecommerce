@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models import Q
 
 
 # Create your models here.
@@ -96,6 +97,12 @@ class Product(BaseContentModel):
             return product.price
         return ProductSize.objects.get(product=product, size=size).price
 
+    @staticmethod
+    def get_available_quantity(product, size=None):
+        if not size:
+            return product.in_stock
+        return ProductSize.objects.get(product=product, size=size).quantity
+
 
 class ProductImage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -182,7 +189,11 @@ class WishList(models.Model):
 class ShippingAddress(models.Model):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="shipping_address",
+    )
     address = models.CharField(max_length=200)
     city = models.CharField(max_length=200)
     state = models.CharField(max_length=200)
@@ -195,20 +206,52 @@ class ShippingAddress(models.Model):
 
 
 class Order(models.Model):
+    STATUS = (
+        ("PENDING", "PENDING"),
+        ("CONFIRMED", "CONFIRMED"),
+        ("PACKING", "PACKING"),
+        ("SHIPPING", "SHIPPING"),
+    )
+
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
 
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders",
+        null=True,
+        blank=True,
     )
+    guest_id = models.CharField(max_length=200, default="", blank=True)
+
     order_date = models.DateTimeField(auto_now_add=True)
-    completed = models.BooleanField(default=False)
+    status = models.CharField(max_length=30, default="PENDING", blank=True)
+    shipping_address = models.ForeignKey(
+        ShippingAddress, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=Q(user__isnull=True) ^ Q(guest_id=""),
+                name="guest_or_user_check",
+                violation_error_message="Order can either have a\
+                    guest_id or a user",
+            ),
+            models.UniqueConstraint(
+                fields=("user", "guest_id"),
+                condition=Q(status="PENDING"),
+                name="unique_pending_order",
+            ),
+        ]
 
     @property
     def cart_total(self):
         return sum([orderitem.total_price for orderitem in self.orderitems.all()])
 
     def __str__(self):
-        return f"Order for {self.user}"
+        user = self.user or self.guest_id
+        return f"Order for {user}"
 
     def __iter__(self):
         for orderitem in self.orderitems.all():
@@ -220,10 +263,6 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     id = models.UUIDField(primary_key=True, editable=False, default=uuid.uuid4)
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
-    )
-    guest_id = models.CharField(max_length=200, null=True, blank=True)
 
     product = models.ForeignKey(
         Product,
@@ -232,8 +271,6 @@ class OrderItem(models.Model):
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        blank=True,
-        null=True,
         related_name="orderitems",
     )
 
@@ -245,23 +282,12 @@ class OrderItem(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=[
-                    "user",
-                    "product",
                     "order",
+                    "product",
                     "size",
                     "color",
                 ],
-                name="unique_user_product_order_orderitems",
-            ),
-            models.UniqueConstraint(
-                fields=[
-                    "guest_id",
-                    "product",
-                    "order",
-                    "size",
-                    "color",
-                ],
-                name="unique_guest_product_order_orderitems",
+                name="unique_product_size_color_order_orderitems",
             ),
         ]
 
@@ -296,6 +322,14 @@ class OrderItem(models.Model):
     def price(self):
         return Product.get_product_price(self.product, self.size)
 
+    @property
+    def num_prod_instock(self):
+        """Get number of products in stock for a given
+        order item
+        """
+        return Product.get_available_quantity(self.product, self.size)
+
+    @property
     def total_price(self):
         return self.price * self.quantity
 
