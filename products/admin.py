@@ -27,7 +27,12 @@ class OrderAdmin(admin.ModelAdmin):
 
 class OrderItemAdmin(admin.ModelAdmin):
     model = OrderItem
-    list_display = ("order_id", "color", "size", "product", "quantity")
+    list_display = ("order", "color", "size", "product", "quantity")
+
+
+class WishlistAdmin(admin.ModelAdmin):
+    model = WishList
+    list_display = ("user", "guest_id", "product")
 
 
 admin.site.register(Product, ProductAdmin)
@@ -36,3 +41,4 @@ admin.site.register(Color)
 admin.site.register(Category)
 admin.site.register(Brand)
 admin.site.register(Order, OrderAdmin)
+admin.site.register(WishList, WishlistAdmin)

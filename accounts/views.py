@@ -17,7 +17,7 @@ from django.urls import reverse
 
 from .forms import CustomUserCreationForm, CustomUserChangeForm, LoginForm
 from .models import CustomUser
-from .utils import email_token_generator
+from .utils import email_token_generator, add_guest_data
 
 
 # Create your views here.
@@ -122,6 +122,7 @@ def login_user(request):
                 request, "accounts/activation_email_request.html", {"detail": "request"}
             )
         else:
+            add_guest_data(request, user)
             login(request, user)
             next = request.GET.get("next", "home")
             return redirect(next)

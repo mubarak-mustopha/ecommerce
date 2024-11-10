@@ -164,21 +164,24 @@ class WishList(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        blank=True,
         null=True,
     )
-    guest_id = models.CharField(max_length=200, null=True)
+    guest_id = models.CharField(max_length=200, blank=True, default="")
 
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "product"],
-                name="unique_user_wishlist_item",
+                fields=["user", "guest_id", "product"],
+                name="unique_wishlist_item",
             ),
-            models.UniqueConstraint(
-                fields=["guest_id", "product"],
-                name="unique_guest_wishlist_item",
+            models.CheckConstraint(
+                check=Q(user__isnull=True) ^ Q(guest_id=""),
+                name="guest_or_user_wishlist_check",
+                violation_error_message="Wishlist can either belong to a"
+                "guest or a user",
             ),
         ]
 
@@ -235,8 +238,7 @@ class Order(models.Model):
             models.CheckConstraint(
                 check=Q(user__isnull=True) ^ Q(guest_id=""),
                 name="guest_or_user_check",
-                violation_error_message="Order can either have a\
-                    guest_id or a user",
+                violation_error_message="Order can either have a" "guest_id or a user",
             ),
             models.UniqueConstraint(
                 fields=("user", "guest_id"),
@@ -251,7 +253,7 @@ class Order(models.Model):
 
     def __str__(self):
         user = self.user or self.guest_id
-        return f"Order for {user}"
+        return f"{self.status.title()} order for {user}"
 
     def __iter__(self):
         for orderitem in self.orderitems.all():
