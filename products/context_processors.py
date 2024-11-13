@@ -7,4 +7,5 @@ def cartitems_count(request):
     order, created = Order.objects.get_or_create(
         user=user, guest_id=guest_id, status="PENDING"
     )
+
     return {"cartitems_count": len(order)}

@@ -211,6 +211,7 @@ class ShippingAddress(models.Model):
 class Order(models.Model):
     STATUS = (
         ("PENDING", "PENDING"),
+        ("PROCESSING", "PROCESSING"),
         ("CONFIRMED", "CONFIRMED"),
         ("PACKING", "PACKING"),
         ("SHIPPING", "SHIPPING"),

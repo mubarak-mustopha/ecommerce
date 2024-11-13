@@ -1,4 +1,7 @@
+import uuid
+
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -7,12 +10,17 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.shortcuts import render, get_object_or_404, redirect
 
+from paypal.standard.forms import PayPalPaymentsForm
+
 from .forms import ShippingAddressForm
 from .models import Product, Category, WishList, OrderItem, Order, ShippingAddress
 from .utils import get_user_or_guest_id
 
 
 from pprint import pprint as pp
+
+
+REMOVEABLE_ORDER_STATUSES = ("PENDING", "PROCESSING")
 
 
 # Create your views here.
@@ -178,6 +186,38 @@ def cart_view(request):
 
 
 @login_required
+def orderlist_view(request):
+    user = request.user
+    orderlist = (
+        Order.objects.filter(user=user)
+        .annotate(num_orderitems=Count("orderitems"))
+        .exclude(num_orderitems=0)
+    )
+    return render(
+        request,
+        "products/orderlist_v1.html",
+        {
+            "orderlist": orderlist,
+            "removeable_order_statuses": REMOVEABLE_ORDER_STATUSES,
+        },
+    )
+
+
+@login_required
+def order_delete_view(request, order_id):
+    user = request.user
+    order = get_object_or_404(Order, id=order_id)
+    if order.user != user:
+        messages.error(request, "Not Allowed!")
+    elif not order.status in REMOVEABLE_ORDER_STATUSES:
+        messages.error(request, f"Can't delete order with status {order.status}")
+    else:
+        order.delete()
+        messages.success(request, "Order successfully deleted.")
+    return redirect(reverse("orderlist"))
+
+
+@login_required
 def checkout(request):
     user = request.user
     order = get_object_or_404(Order, user=user, status="PENDING")
@@ -187,6 +227,17 @@ def checkout(request):
         ShippingAddress.objects.filter(user=user).order_by("-date_added").first()
     )
     shipping_form = ShippingAddressForm(instance=user_address)
+
+    if request.method == "POST":
+        shipping_form = ShippingAddressForm(request.POST)
+        if shipping_form.is_valid():
+            shipping_address = shipping_form.save(commit=False)
+            shipping_address.user = user
+            shipping_address.save()
+            order.shipping_address = shipping_address
+            order.status = "PROCESSING"
+            order.save()
+            return redirect(reverse("make-payment", kwargs={"order_id": order.id}))
 
     return render(
         request,
@@ -199,3 +250,44 @@ def checkout(request):
             "total": subtotal + settings.SHIPPING_PRICE,
         },
     )
+
+
+@login_required
+def make_payment(request, order_id):
+    host = request.get_host()
+    order = get_object_or_404(Order, id=order_id)
+
+    paypal_data = {
+        "business": settings.PAYPAL_RECEIVER_EMAIL,
+        "amount": order.cart_total + settings.SHIPPING_PRICE,
+        "item_name": f"ORDER ID: {order.id}",
+        "invoice": uuid.uuid4(),
+        "currency_code": "USD",
+        "notify_url": f"http://{host}{reverse('paypal-ipn')}",
+        "return": f"http://{host}{reverse('payment-success', kwargs = {'order_id': order_id})}",
+        "cancel_return": f"http://{host}{reverse('payment-failed', kwargs = {'order_id': order_id})}",
+    }
+
+    paypal_form = PayPalPaymentsForm(initial=paypal_data)
+    context = {
+        "shipping": settings.SHIPPING_PRICE,
+        "subtotal": order.cart_total,
+        "total": order.cart_total + settings.SHIPPING_PRICE,
+        "order": order,
+        "form": paypal_form,
+    }
+    return render(request, "products/payment_v1.html", context=context)
+
+
+def payment_success(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    order.status = "CONFIRMED"
+    order.save()
+
+    return render(request, "products/payment-sucess.html", {"order": order})
+
+
+def payment_failed(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+
+    return render(request, "products/payment-failed.html", {"order": order})

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
+{% load widget_tweaks %}
+<!-- {% load crispy_forms_tags %} -->
 
 {% block content %}
 
@@ -10,95 +11,107 @@
             <!-- shipping form -->
                 <form action="" method="POST">
                     {% csrf_token %}
+                    <div class="row g-5">
 
-                    {{form|crispy}}           
-
-                <!-- order items table -->
-                <div class="col-md-12 col-lg-6 col-xl-5">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Products</th>
-                                    <th scope="col">Name</th>
-                                    <th scope="col">Price</th>
-                                    <th scope="col">Quantity</th>
-                                    <th scope="col">Total</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                {% for item in order %}
-                                    <tr>
-                                        <th scope="row">
-                                            <div class="d-flex align-items-center mt-2">
-                                                <img src="{{item.product.imageUrl}}" class="img-fluid rounded-circle" style="width: 90px; height: 90px;" alt="">
-                                            </div>
-                                        </th>
-                                        <td class="py-5">{{item.product.name}}</td>
-                                        <td class="py-5">${{item.price|floatformat:2}}</td>
-                                        <td class="py-5">{{item.quantity}}</td>
-                                        <td class="py-5">${{item.total_price|floatformat:2}}</td>
-                                    </tr>
+                            <!-- {{form|crispy}}          -->
+                            <div class="col-md-12 col-lg-6 col-xl-7">
+                                {% for field in form %}
+                                    <div class="form-item">
+                                        {{ field.errors }}
+                                        <label class="form-label my-3"
+                                        for="{{ field.id_for_label }}">{{field.label}}
+                                         <sup>*</sup>
+                                        </label>
+                                        {{ field|add_class:"form-control" }}
+                                    </div>
                                 {% endfor %}
+                            </div>
+                        <!-- order items table -->
+                            <div class="col-md-12 col-lg-6 col-xl-5">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col">Products</th>
+                                                <th scope="col">Name</th>
+                                                <th scope="col">Price</th>
+                                                <th scope="col">Quantity</th>
+                                                <th scope="col">Total</th>
+                                            </tr>
+                                        </thead>
 
-                                <!-- subtotal -->
-                                <tr>
-                                    <th scope="row">
-                                    </th>
-                                    <td class="py-5"></td>
-                                    <td class="py-5"></td>
-                                    <td class="py-5">
-                                        <p class="mb-0 text-dark py-3">Subtotal</p>
-                                    </td>
-                                    <td class="py-5">
-                                        <div class="py-3 border-bottom border-top">
-                                            <p class="mb-0 text-dark">${{subtotal|floatformat:2}}</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                        <tbody>
+                                            {% for item in order %}
+                                                <tr>
+                                                    <th scope="row">
+                                                        <div class="d-flex align-items-center mt-2">
+                                                            <img src="{{item.product.imageUrl}}" class="img-fluid rounded-circle" style="width: 90px; height: 90px;" alt="">
+                                                        </div>
+                                                    </th>
+                                                    <td class="py-5">{{item.product.name}}</td>
+                                                    <td class="py-5">${{item.price|floatformat:2}}</td>
+                                                    <td class="py-5">{{item.quantity}}</td>
+                                                    <td class="py-5">${{item.total_price|floatformat:2}}</td>
+                                                </tr>
+                                            {% endfor %}
 
-                                <!-- shipping -->
-                                <tr>
-                                    <th scope="row">
-                                    </th>
-                                    <td class="py-5"></td>
-                                    <td class="py-5"></td>
-                                    <td class="py-5">
-                                        <p class="mb-0 text-dark py-3">Shipping</p>
-                                    </td>
-                                    <td class="py-5">
-                                        <div class="py-3 border-bottom border-top">
-                                            <p class="mb-0 text-dark">${{shipping|floatformat:2}}</p>
-                                        </div>
-                                    </td>
-                                </tr>
+                                            <!-- subtotal -->
+                                            <tr>
+                                                <th scope="row">
+                                                </th>
+                                                <td class="py-3"></td>
+                                                <td class="py-3"></td>
+                                                <td class="py-3">
+                                                    Subtotal
+                                                </td>
+                                                <td class="py-3">
+                                                        ${{subtotal|floatformat:2}}
+                                                </td>
+                                            </tr>
 
-                                <!-- total -->
-                                <tr>
-                                    <th scope="row">
-                                    </th>
-                                    <td class="py-5"></td>
-                                    <td class="py-5"></td>
-                                    <td class="py-5">
-                                        <p class="mb-0 text-dark py-3">Total</p>
-                                    </td>
-                                    <td class="py-5">
-                                        <div class="py-3 border-bottom border-top">
-                                            <p class="mb-0 text-dark">${{total|floatformat:2}}</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <!-- total end -->
-                            </tbody>
+                                            <!-- shipping -->
+                                            <tr>
+                                                <th scope="row">
+                                                </th>
+                                                <td class="py-3"></td>
+                                                <td class="py-3"></td>
+                                                <td class="py-3">
+                                                    Shipping
+                                                </td>
+                                                <td class="py-3">
+                                                    ${{shipping|floatformat:2}}
+                                                </td>
+                                            </tr>
 
-                        </table>
-                    </div>
-                </div>            
-                <!-- order table ends -->
+                                            <!-- total -->
+                                            <tr>
+                                                <th scope="row">
+                                                </th>
+                                                <td class="py-3"></td>
+                                                <td class="py-3"></td>
+                                                <td class="py-3">
+                                                    <p class="mb-0 text-dark py-3">Total</p>
+                                                </td>
+                                                <td class="py-3">
+                                                    <div class="py-3 border-bottom border-top">
+                                                        <p class="mb-0 text-dark">${{total|floatformat:2}}</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <!-- total end -->
+                                        </tbody>
 
-                <button class="btn btn-outline-success rounded-pill px-4 py-3 text-uppercase mb-4 ms-4" 
-                type="submit">PLACE ORDER</button>
+                                    </table>
+                                </div>
+                                <div class="row g-4 text-center align-items-center justify-content-center pt-4">
+                                    <button class="btn btn-outline-success rounded-pill px-4 py-3 text-uppercase mb-4 ms-4" 
+                            type="submit">PLACE ORDER</button>
+                                </div>
+
+                            </div>            
+                            <!-- order table ends -->
+
+                    </div>        
 
             </form>
         </div>

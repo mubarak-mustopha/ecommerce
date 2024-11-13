@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     # third-party
     "crispy_forms",
     "crispy_bootstrap5",
+    "paypal.standard.ipn",
+    "widget_tweaks",
     # local
     "accounts.apps.AccountsConfig",
     "base.apps.BaseConfig",
@@ -171,3 +173,11 @@ MESSAGE_TAGS = {
 from decimal import Decimal
 
 SHIPPING_PRICE = Decimal("10.0")
+
+
+# PAYPAL SETTINGS
+PAYPAL_RECEIVER_EMAIL = "muby@email.com"
+PAYPAL_TEST = True
+# PAYPAL_BUY_BUTTON_IMAGE = "/images/assets/paypal.svg"
+
+

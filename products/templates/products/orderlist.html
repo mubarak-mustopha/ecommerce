@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+
+{% block content %}
+    {% for order in orderlist %}
+        <p>ORDER ID: {{order.id}}</p>
+        <p>STATUS: {{order.status}}</p>
+        <p>{{order.orderitems.count}}</p>
+        {% if order.status == "PROCESSING" %}
+            <p><a href="{% url 'make-payment' order.id %}">Proceed to pay</a></p>
+        {% endif %}
+    {% endfor %}
+
+{% endblock %}
