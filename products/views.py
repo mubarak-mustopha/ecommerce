@@ -201,7 +201,7 @@ def orderlist_view(request):
     orderlist = Order.objects.filter(user=user)
     return render(
         request,
-        "products/orderlist_v1.html",
+        "products/orderlist.html",
         {
             "orderlist": orderlist,
             "removeable_order_statuses": REMOVEABLE_ORDER_STATUSES,
@@ -287,7 +287,7 @@ def make_payment(request, order_id):
         "order": order,
         "form": paypal_form,
     }
-    return render(request, "products/payment_v1.html", context=context)
+    return render(request, "products/payment.html", context=context)
 
 
 def payment_success(request, order_id):

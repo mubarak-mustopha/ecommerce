@@ -1,14 +1,65 @@
 {% extends 'base.html' %}
 
-
 {% block content %}
-    {% for order in orderlist %}
-        <p>ORDER ID: {{order.id}}</p>
-        <p>STATUS: {{order.status}}</p>
-        <p>{{order.orderitems.count}}</p>
-        {% if order.status == "PROCESSING" %}
-            <p><a href="{% url 'make-payment' order.id %}">Proceed to pay</a></p>
-        {% endif %}
-    {% endfor %}
 
-{% endblock %}
+
+    <div class="container-fluid py-5">
+        <div class="container py-5">
+            <h1 class="mb-4">MY ORDERS</h1>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Address</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Total</th>
+                            <th scope="col">Action</th>
+                            <th scope="col">Remove</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for order in orderlist %}
+                            <tr>
+                                {% with address=order.shipping_address status=order.status %}
+                                    <td class="py-5">
+                                        {% if address %}                       
+                                            {{address.city}}, {{address.state}} ({{address.zipcode}})                                       
+                                        {% else %}
+                                        NULL
+                                        {% endif %}
+                                    </td>
+                                    
+                                    <td class="py-5">{{order.status}}</td>
+                                    <td class="py-5">${{order.cart_total|floatformat:2}}</td>
+                                    {% if status == "PROCESSING" %}
+                                    <td class="py-5"><a href="{% url 'make-payment' order.id %}">
+                                        Proceed to pay</a></td>
+                                    {% elif status == "PENDING" %}
+                                    <td class="py-5"><a href="{% url 'checkout' %}">
+                                        Proceed to checkout</a></td>
+                                    {% endif %}
+                                    <td>
+                                    <a href="{% url 'order-delete' order.id %}">
+                                        <button class="btn btn-md rounded-circle bg-light border mt-4" 
+                                        {% if not status in removeable_order_statuses %}
+                                            disabled
+                                        {% endif %}
+                                        data-index="{{forloop.counter0}}">
+                                            <i class="fa fa-times text-danger"></i>
+                                        </button>
+                                    </a>    
+                                    </td>
+                                {% endwith %}
+                            </tr>
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+            </div>
+
+        </div>
+    </div>        
+
+{% endblock content %}
