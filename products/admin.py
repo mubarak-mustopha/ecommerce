@@ -35,6 +35,11 @@ class WishlistAdmin(admin.ModelAdmin):
     list_display = ("user", "guest_id", "product")
 
 
+class AddressAdmin(admin.ModelAdmin):
+    model = ShippingAddress
+    list_display = ("user", "address", "city", "state")
+
+
 admin.site.register(Product, ProductAdmin)
 admin.site.register(OrderItem, OrderItemAdmin)
 admin.site.register(Color)
@@ -42,3 +47,4 @@ admin.site.register(Category)
 admin.site.register(Brand)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(WishList, WishlistAdmin)
+admin.site.register(ShippingAddress, AddressAdmin)

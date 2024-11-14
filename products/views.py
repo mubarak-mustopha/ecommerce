@@ -34,10 +34,12 @@ def shop(request):
     page_range = paginator.page_range
 
     user, guest_id = get_user_or_guest_id(request)
-    cart, created = Order.objects.get_or_create(
-        user=user, guest_id=guest_id, status="PENDING"
-    )
-    cart = cart.orderitems.values_list("product_id", flat=True)
+    cart = Order.objects.filter(user=user, guest_id=guest_id, status="PENDING").first()
+
+    if cart:
+        cart = cart.orderitems.values_list("product_id", flat=True)
+    else:
+        cart = []
 
     wishlist = WishList.objects.filter(user=user, guest_id=guest_id).values_list(
         "product_id", flat=True
@@ -104,7 +106,9 @@ def cart_update(request, pk):
     user, guest_id = get_user_or_guest_id(request)
     product = get_object_or_404(Product, id=pk)
 
-    order = Order.objects.get(user=user, guest_id=guest_id, status="PENDING")
+    order, _ = Order.objects.get_or_create(
+        user=user, guest_id=guest_id, status="PENDING"
+    )
 
     if action == "add":
         _, created = OrderItem.objects.get_or_create(
@@ -169,9 +173,15 @@ def cart_update(request, pk):
 
 def cart_view(request):
     user, guest_id = get_user_or_guest_id(request)
-    order = Order.objects.filter(user=user, guest_id=guest_id, status="PENDING").first()
+    order = (
+        Order.objects.filter(user=user, guest_id=guest_id, status="PENDING").first()
+        or []
+    )
 
-    subtotal = order.cart_total
+    if order:
+        subtotal = order.cart_total
+    else:
+        subtotal = 0
 
     return render(
         request,
@@ -188,11 +198,7 @@ def cart_view(request):
 @login_required
 def orderlist_view(request):
     user = request.user
-    orderlist = (
-        Order.objects.filter(user=user)
-        .annotate(num_orderitems=Count("orderitems"))
-        .exclude(num_orderitems=0)
-    )
+    orderlist = Order.objects.filter(user=user)
     return render(
         request,
         "products/orderlist_v1.html",
