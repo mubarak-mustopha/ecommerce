@@ -230,16 +230,21 @@ def checkout(request):
     subtotal = order.cart_total
 
     user_address = (
-        ShippingAddress.objects.filter(user=user).order_by("-date_added").first()
+        ShippingAddress.objects.filter(user=user).order_by("date_added").last()
     )
     shipping_form = ShippingAddressForm(instance=user_address)
 
     if request.method == "POST":
         shipping_form = ShippingAddressForm(request.POST)
         if shipping_form.is_valid():
-            shipping_address = shipping_form.save(commit=False)
-            shipping_address.user = user
-            shipping_address.save()
+            data = request.POST
+            shipping_address, _ = ShippingAddress.objects.get_or_create(
+                address=data.get("address"),
+                city=data.get("city"),
+                state=data.get("state"),
+                zipcode=data.get("zipcode"),
+                user=user,
+            )
             order.shipping_address = shipping_address
             order.status = "PROCESSING"
             order.save()
