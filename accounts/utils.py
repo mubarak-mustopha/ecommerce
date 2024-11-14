@@ -31,8 +31,12 @@ def add_guest_data(request, user):
     guest_wishlist.update(guest_id="", user=user)
 
     # update order
+    if not guest_order:
+        return
     if not user_pending_order:
-        guest_order.update(guest_id="", user=user)
+        guest_order.guest_id = ""
+        guest_order.user = user
+        guest_order.save(update_fields=["guest_id", "user"])
     else:
         non_duplicate_orderitems = []
         for orderitem in guest_order:

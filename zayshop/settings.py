@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-*e9df9$21**9k)yfspris1nf%q3e-jp5zft81+qpx91y-dv-uu"
+SECRET_KEY = config("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config("DEBUG", cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = config("ALLOWED_HOST").split()
 
 
 # Application definition
@@ -151,8 +152,15 @@ LOGIN_URL = "login"
 
 # Email settings
 FROM_EMAIL = "mubaarock021@gmail.com"
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+# if DEBUG:
+#     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# else:
+EMAIL_HOST = config("EMAIL_HOST")
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+EMAIL_PORT = config("EMAIL_PORT")
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool)
 
 # crispy_forms settings
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"  # new
@@ -179,5 +187,3 @@ SHIPPING_PRICE = Decimal("10.0")
 PAYPAL_RECEIVER_EMAIL = "muby@email.com"
 PAYPAL_TEST = True
 # PAYPAL_BUY_BUTTON_IMAGE = "/images/assets/paypal.svg"
-
-
