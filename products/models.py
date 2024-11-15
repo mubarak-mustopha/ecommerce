@@ -103,6 +103,18 @@ class Product(BaseContentModel):
             return product.in_stock
         return ProductSize.objects.get(product=product, size=size).quantity
 
+    def update_quantity(self, by, commit=True, size=None):
+        model = self
+        update_fields = ["in_stock"]
+        if not size:
+            model.in_stock += by
+        else:
+            model = self.productsizes.get(size=size)
+            model.quantity += by
+            update_fields = ["quantity"]
+        if commit:
+            model.save(update_fields=update_fields)
+        return model
 
 class ProductImage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

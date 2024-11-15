@@ -14,7 +14,7 @@ from paypal.standard.forms import PayPalPaymentsForm
 
 from .forms import ShippingAddressForm
 from .models import Product, Category, WishList, OrderItem, Order, ShippingAddress
-from .utils import get_user_or_guest_id
+from .utils import get_user_or_guest_id, update_product_quantity
 
 
 from pprint import pprint as pp
@@ -292,6 +292,7 @@ def make_payment(request, order_id):
 
 def payment_success(request, order_id):
     order = get_object_or_404(Order, id=order_id)
+    update_product_quantity(order)
     order.status = "CONFIRMED"
     order.save()
 
